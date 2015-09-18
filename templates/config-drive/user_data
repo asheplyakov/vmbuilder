@@ -1,0 +1,84 @@
+#cloud-config
+
+chpasswd:
+  list: |
+    root:r00tme
+    ubuntu:ubuntu
+  expire: False
+ssh_pwauth: True
+disable_root: False
+ssh_authorized_keys:{% for key in ssh_authorized_keys %}
+ - {{ key }}{% endfor %}
+
+{% if swap_label %}
+bootcmd:
+ - echo 'LABEL={{ swap_label }} none swap sw 0 0' >> /etc/fstab
+ - swapon -a || true
+{% endif %}
+
+apt_sources:
+ - source: deb http://asheplyakov.srt.mirantis.net/Public/repos/ceph {{ ceph_release }}-{{ distro_release }} main
+   filename: ceph.list
+
+add_apt_repo_match: '^[\w-]+:\w'
+
+{% if http_proxy %}
+apt_proxy: {{ http_proxy }}
+{% endif %}
+
+write_files:
+ - path: /etc/hosts
+   permissions: '0644'
+   content: |
+     127.0.0.1 localhost
+ - path: /etc/apt/sources.list
+   permissions: '0644'
+   content: |
+     deb http://ru.archive.ubuntu.com/ubuntu {{ distro_release }} main universe multiverse restricted
+     deb http://ru.archive.ubuntu.com/ubuntu {{ distro_release }}-updates  main universe multiverse restricted
+     deb http://ru.archive.ubuntu.com/ubuntu {{ distro_release }}-security main universe multiverse restricted
+ - path: /etc/apt/preferences.d/ceph.pref
+   permissions: '0644'
+   content: |
+     Package: *
+     Pin: release l=sa-{{ ceph_release }}-{{ distro_release }}
+     Pin-Priority: 1050
+ - path: /etc/apt/apt.conf.d/90_allow_unsigned_repos
+   permissions: '0644'
+   content: |
+     APT::Get::AllowUnauthenticated "1";
+ - path: /etc/init/ttyS0.conf
+   permissions: '0644'
+   content: |
+     # login prompt on serial console
+     start on stopped rc RUNLEVEL=[2345]
+     stop on RUNLEVEL [!12345]
+     respawn
+     exec /sbin/getty -L 115200 ttyS0 vt102
+
+apt_preserve_sources_list: True
+
+runcmd:
+ - mkdir -m755 -p /media/work
+ - "echo 'debconf debconf/priority select critical' | debconf-set-selections"
+ - "echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections"
+ - apt-get update
+ - apt-get dist-upgrade -y
+ - "echo 'kexec-tools kexec-tools/load_kexec boolean true' | debconf-set-selections"
+ - apt-get install -y haveged kexec-tools nfs-common gdbserver vim-nox ceph parted
+{% if hypervisor_ip %}
+ - "echo '{{ hypervisor_ip }}:/home/asheplyakov/work /media/work nfs rw,tcp,hard,noatime,_netdev 0 0' >> /etc/fstab"
+{% endif %}
+ - dpkg --configure -a
+ - "apt-get purge -y cloud-init"
+
+{% if web_callback_url %}
+phone_home:
+  url: {{ web_callback_url }}
+  post: [ hostname, pub_key_rsa ]
+{% endif %}
+
+power_state:
+  mode: reboot
+  message: Rebooting
+  condition: True

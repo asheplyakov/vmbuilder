@@ -1,0 +1,16 @@
+<network>
+  <name>saceph-priv</name>
+  <bridge name='br-saceph-priv' stp='on' delay='0'/>
+  <domain name='vm.ceph.asheplyakov'/>
+  <dns>
+    <host ip='10.253.0.1'>
+      <hostname>sahost</hostname>
+    </host>
+  </dns>
+  <ip address='10.253.0.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='10.253.0.10' end='10.253.0.254'/>
+    </dhcp>
+  </ip>
+</network>
+

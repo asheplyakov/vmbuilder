@@ -1,0 +1,55 @@
+
+cluster_name: saceph
+ceph_release: jewel
+distro_release: trusty
+
+hosts:
+  mons:
+    - saceph-mon
+    - saceph-mon2
+    - saceph-mon3
+  osds:
+    - saceph-osd1
+    - saceph-osd2
+    - saceph-osd3
+  rgws:
+    - saceph-rgw
+  clients:
+    - saceph-adm
+
+
+storage_conf:
+  os:
+    vg: as-ubuntu-vg
+    thin_pool: vmpool
+  journal:
+    vg: as-ubuntu-vg
+    thin_pool: vmpool
+  data:
+    vg: wdgreen
+    thin_pool: vmpool
+
+
+vm_conf:
+  base_ram: 2048
+  osds_per_node: 2
+  swap_size: 4096
+  drives:
+    os:
+      disk_size: 32768
+    journal:
+      disk_size: 8192
+    data:
+      disk_size: 1048576
+  swap_label: MOREVM
+
+
+net_conf:
+  http_proxy: "http://{hypervisor_ip}:3128"
+
+networks:
+  default:
+    source_net: "saceph-priv"
+
+source_image:
+  url: "http://cloud-images.ubuntu.com/{distro_release}/current/{distro_release}-server-cloudimg-amd64-disk1.img"

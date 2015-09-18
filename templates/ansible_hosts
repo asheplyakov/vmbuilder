@@ -1,0 +1,6 @@
+{% for role in hosts %}
+[{{ role }}]
+{% for host in hosts['role'] %}
+{{ host }}
+{% endfor %}
+{% endfor %}
