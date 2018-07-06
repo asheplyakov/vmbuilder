@@ -251,6 +251,7 @@ def main():
         sys.exit(1)
     provision(args,
               img=options.image,
+              config_drives=[options.config_drive],
               swap_size=options.swap_size * 1024 * 2,
               swap_label=options.swap_label)
     sys.exit(0)
