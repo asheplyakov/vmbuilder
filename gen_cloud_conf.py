@@ -13,7 +13,7 @@ from sshutils import get_authorized_keys
 
 MY_DIR = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(MY_DIR, '.build/config-drive')
-TEMPLATE_DIR = os.path.join(MY_DIR, 'templates/config-drive')
+TEMPLATE_DIR = os.path.join(MY_DIR, 'templates/config-drive/ubuntu')
 
 
 def render_and_save(data, vm_name=None, tmpl_dir=TEMPLATE_DIR):
@@ -22,15 +22,11 @@ def render_and_save(data, vm_name=None, tmpl_dir=TEMPLATE_DIR):
         os.makedirs(base_dir)
 
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_dir))
-    templates = {
-        'user_data': 'user-data',
-        'meta-data': 'meta-data',
-    }
 
-    for tmpl_name, out_name in templates.iteritems():
-        template = env.get_or_select_template(tmpl_name)
+    for name in ('user-data', 'meta-data'):
+        template = env.get_or_select_template(name)
         out = template.render(data)
-        out_file = os.path.join(base_dir, out_name)
+        out_file = os.path.join(base_dir, name)
         with open(out_file, 'w') as f:
             f.write(out)
 
