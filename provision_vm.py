@@ -120,16 +120,10 @@ def partition_vhd(vdisk,
         config_drive_start=config_drive_start,
         config_drive_size=config_drive_size)
 
-    try:
-        out, err = sfdisk.communicate(partition_table)
-        rc = sfdisk.poll()
-        if rc != 0:
-            raise RuntimeError("sfdisk: error %d, message: %s" % (rc, err))
-    except subprocess.CalledProcessError as e:
-        print("sfdisk failed with code %s" % e.returncode)
-        print("sfdisk output: %s" % out)
-        print("sfdisk stderr: %s" % err)
-        raise
+    out, err = sfdisk.communicate(partition_table)
+    rc = sfdisk.poll()
+    if rc != 0:
+        raise RuntimeError("sfdisk: error %d, message: %s" % (rc, err))
 
 
 def guess_first_partition_size_offset(img):
