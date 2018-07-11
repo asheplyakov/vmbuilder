@@ -6,7 +6,7 @@ import Queue
 import sys
 import web
 from optparse import OptionParser
-from threading import Thread
+from threading import Thread, Lock
 
 from sshutils import update_known_hosts
 
@@ -54,6 +54,7 @@ class CloudInitWebCallback(object):
         self._app = web.application(urls, globals())
         self._install_callback()
         self._webapp_thread = Thread(target=self._app.run)
+        self._ssh_conf_mutex = Lock()
 
     def _vm_ready_hook(self, **kwargs):
         # invoked by web app on POST
@@ -65,7 +66,8 @@ class CloudInitWebCallback(object):
             vm_dat = self._ssh_keys_queue.get()
             vm_name = vm_dat['hostname']
             ssh_key = vm_dat['ssh_key']
-            update_known_hosts(ssh_key=ssh_key, ips=[(vm_dat['ip'], vm_name)])
+            with self._ssh_conf_mutex:
+                update_known_hosts(ssh_key=ssh_key, ips=[(vm_dat['ip'], vm_name)])
             seen_vms.add(vm_dat['hostname'])
             print("vm {0} ready, ssh key: {1}".format(vm_name, ssh_key))
         self._app.stop()
