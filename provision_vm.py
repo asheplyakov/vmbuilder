@@ -101,7 +101,7 @@ def partition_vhd(vdisk,
     config_drive_start = swap_start + swap_size
     subprocess.check_call(['dd', 'if=/dev/zero', 'of=%s' % vdisk,
                            'bs=1M', 'count=1', 'conv=fsync'])
-    sfdisk = subprocess.Popen(['sfdisk', '-u', 'S', vdisk],
+    sfdisk = subprocess.Popen(['sfdisk', '--force', '-u', 'S', vdisk],
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
