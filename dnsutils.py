@@ -20,7 +20,7 @@ def dns_reverse_resolve(ip, server=None):
         cmd.append('@' + server)
     out = subprocess.check_output(cmd)
     if not out:
-        raise NoSuchIp(msg=ip)
+        raise NoSuchIp(ip)
     # 21.0.253.10.in-addr.arpa. 0   IN  PTR saceph-mon.vm.ceph.asheplyakov.
     try:
         fqdn = out.strip().rsplit(None, -1)[-1]
@@ -52,4 +52,8 @@ def guess_fqdn(ip=None, hostname=None):
     if '.' in hostname:
         return hostname
     else:
-        return dns_reverse_resolve(ip) if ip else hostname
+        try:
+            return dns_reverse_resolve(ip) if ip else hostname
+        except NoSuchIp:
+            print("WARNING: ip %s can't be resolved" % ip)
+            return hostname
