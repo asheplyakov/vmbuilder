@@ -39,6 +39,7 @@ def rebuild_vms(vm_dict,
     vm_conf = cluster_def['vm_conf']
     storage_conf = cluster_def['storage_conf']
     source_image_data = cluster_def['source_image']
+    distro = cluster_def.get('distro', 'ubuntu')
 
     # VMs heavily use disk on first boot (dist-upgrade, install additional
     # packages, etc). Therefore one might want to limit the number of VMs
@@ -83,7 +84,7 @@ def rebuild_vms(vm_dict,
                         vm_conf=vm_conf,
                         storage_conf=storage_conf,
                         net_conf=cluster_def['networks'])
-        config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name)
+        config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name, distro=distro)
         vdisk = '/dev/{vg}/{lv}'.format(vg=storage_conf['os']['vg'],
                                         lv=os_lv_name(vm_name))
         destroy_vm(vm_name)
@@ -139,6 +140,7 @@ def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
 
 def make_cloud_conf_data(cluster_def):
     cloud_conf_data = {
+        'distro': cluster_def['distro'],
         'distro_release': cluster_def['distro_release'],
         'ceph_release': cluster_def['ceph_release'],
         'swap_size': cluster_def['vm_conf']['swap_size'],

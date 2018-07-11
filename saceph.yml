@@ -1,6 +1,7 @@
 
 cluster_name: saceph
 ceph_release: jewel
+distro: ubuntu
 distro_release: trusty
 
 hosts:

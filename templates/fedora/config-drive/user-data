@@ -1,0 +1,31 @@
+#cloud-config
+
+chpasswd:
+  list: |
+    root:r00tme
+    fedora:fedora
+  expire: False
+ssh_pwauth: True
+disable_root: False
+ssh_authorized_keys:{% for key in ssh_authorized_keys %}
+ - {{ key }}{% endfor %}
+
+{% if swap_label %}
+bootcmd:
+ - echo 'LABEL={{ swap_label }} none swap sw 0 0' >> /etc/fstab
+ - swapon -a || true
+{% endif %}
+
+runcmd:
+ - yum install -y openssh-server
+ - yum install -y python2
+ - yum install -y python2-dnf
+ - systemctl enable serial-getty@ttyS0
+ - systemctl start serial-getty@ttyS0
+
+{% if web_callback_url %}
+phone_home:
+  url: {{ web_callback_url }}
+  post: [ hostname, pub_key_rsa ]
+{% endif %}
+
