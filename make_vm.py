@@ -60,7 +60,7 @@ def make_vm_xml(vm_name=None,
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
     vm_params = copy.deepcopy(vm_conf)
     vm_params.update(vm_name=vm_name, role=role)
-    osds_per_node = vm_params['osds_per_node']
+    osds_per_node = vm_params.get('osds_per_node', 1)
     vm_params.update(ram_mb=calc_ram_size(role,
                                           vm_conf['base_ram'],
                                           osds_per_node),
