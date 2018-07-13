@@ -142,10 +142,11 @@ def make_cloud_conf_data(cluster_def):
     cloud_conf_data = {
         'distro': cluster_def['distro'],
         'distro_release': cluster_def['distro_release'],
-        'ceph_release': cluster_def['ceph_release'],
         'swap_size': cluster_def['vm_conf']['swap_size'],
         'swap_label': cluster_def['vm_conf']['swap_label'],
     }
+    if 'ceph_release' in cluster_def:
+        cloud_conf_data['ceph_release'] = cluster_def['ceph_release']
 
     net_conf = cluster_def['networks']
     bridge_ip = libvirt_net_host_ip(net_conf['default']['source_net'])
