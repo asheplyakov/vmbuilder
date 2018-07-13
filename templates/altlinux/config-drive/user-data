@@ -1,0 +1,34 @@
+#cloud-config
+
+chpasswd:
+  list: |
+    root:rootme
+    altlinux:altlinux
+  expire: False
+ssh_pwauth: True
+disable_root: False
+ssh_authorized_keys:{% for key in ssh_authorized_keys %}
+ - {{ key }}{% endfor %}
+
+{% if swap_label %}
+bootcmd:
+ - echo 'LABEL={{ swap_label }} none swap sw 0 0' >> /etc/fstab
+ - swapon -a || true
+{% endif %}
+
+runcmd:
+ - systemctl enable serial-getty@ttyS0
+ - systemctl start serial-getty@ttyS0
+ - apt-get install -y haveged
+ - systemctl enable haveged.service
+ - systemctl start haveged.service
+ - apt-get install -y openssh-server
+ - systemctl enable sshd.service
+ - systemctl start sshd.service
+
+{% if web_callback_url %}
+phone_home:
+  url: {{ web_callback_url }}
+  post: [ hostname, pub_key_rsa ]
+{% endif %}
+
