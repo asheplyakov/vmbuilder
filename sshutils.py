@@ -59,5 +59,5 @@ def update_known_hosts(ips=None, ssh_key=None,
         with open(known_hosts_file, 'a') as f:
             for ip, hostname in ips:
                 fqdn = guess_fqdn(ip=ip, hostname=hostname)
-                f.write('{fqdn} {key}\n'.format(fqdn=fqdn, key=ssh_key))
+                f.write('{fqdn},{ip} {key}\n'.format(fqdn=fqdn, ip=ip, key=ssh_key))
             f.flush()
