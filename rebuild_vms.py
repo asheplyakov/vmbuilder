@@ -23,7 +23,7 @@ MY_DIR = os.path.abspath(os.path.dirname(__file__))
 IMG_CACHE_DIR = '/srv/data/Public/img'
 ## --- configuration section ends here --- ##
 
-WEB_CALLBACK_ADDR = '{hypervisor_ip}:8080'
+WEB_CALLBACK_URL = 'http://{hypervisor_ip}:8080'
 
 
 def rebuild_vms(vm_dict,
@@ -152,15 +152,13 @@ def make_cloud_conf_data(cluster_def):
     bridge_ip = libvirt_net_host_ip(net_conf['default']['source_net'])
     cloud_conf_data.update(hypervisor_ip=bridge_ip)
 
-    http_proxy = None
-    if 'http_proxy' in cluster_def['net_conf']:
-        http_proxy_tpl = cluster_def['net_conf']['http_proxy']
-        http_proxy = http_proxy_tpl.format(hypervisor_ip=bridge_ip)
+    http_proxy_tpl = cluster_def.get('net_conf', {}).get('http_proxy')
+    http_proxy = http_proxy_tpl.format(hypervisor_ip=bridge_ip) \
+       if http_proxy_tpl else None
     cloud_conf_data.update(http_proxy=http_proxy)
 
-    web_callback_url = cluster_def['net_conf'].get('web_callback_url')
-    if not web_callback_url:
-        web_callback_url = ('http://' + WEB_CALLBACK_ADDR)
+    web_callback_url = cluster_def.get('net_conf', {}).\
+        get('web_callback_url', WEB_CALLBACK_URL)
     web_callback_url = web_callback_url.format(hypervisor_ip=bridge_ip)
     web_callback_addr = web_callback_url.split('http://', 1)[1]
     cloud_conf_data.update(web_callback_url=web_callback_url,
