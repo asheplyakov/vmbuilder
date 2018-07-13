@@ -12,7 +12,6 @@ from miscutils import padded
 SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'
 CONFIG_DRIVE_MB = 4
-BDEV_GROUP = 'adm'
 
 
 def _provision(vdisk, img=None,
@@ -214,9 +213,10 @@ def verify_raw_image(img):
 
 
 def fixup_vdisk_ownership(vdisk):
+    gid = os.getgid()
     for bdev in glob.glob(vdisk + '*'):
-        subprocess.check_call(['sudo', 'chmod', '664', bdev])
-        subprocess.check_call(['sudo', 'chgrp', BDEV_GROUP, bdev])
+        subprocess.check_call(['sudo', 'chmod', '660', bdev])
+        subprocess.check_call(['sudo', 'chgrp', str(gid), bdev])
 
 
 def run_dd(src, dst, **kwargs):
