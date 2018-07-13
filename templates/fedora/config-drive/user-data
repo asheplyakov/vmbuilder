@@ -17,11 +17,14 @@ bootcmd:
 {% endif %}
 
 runcmd:
- - yum install -y openssh-server
- - yum install -y python2
- - yum install -y python2-dnf
  - systemctl enable serial-getty@ttyS0
  - systemctl start serial-getty@ttyS0
+ - yum install -y haveged
+ - yum install -y python2
+ - yum install -y python2-dnf
+ - yum install -y openssh-server
+ - systemctl enable sshd
+ - systemctl start sshd
 
 {% if web_callback_url %}
 phone_home:
