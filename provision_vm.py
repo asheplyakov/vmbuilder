@@ -5,6 +5,7 @@ import glob
 import stat
 import subprocess
 import sys
+import threading
 from optparse import OptionParser
 
 from miscutils import padded
@@ -12,6 +13,9 @@ from miscutils import padded
 SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'
 CONFIG_DRIVE_MB = 4
+
+# XXX: kpartx uses /dev/loop0, so concurrent kpartx can lock up or give wrong results
+KPARTX_MUTEX = threading.RLock()
 
 
 def _provision(vdisk, img=None,
@@ -126,7 +130,8 @@ def partition_vhd(vdisk,
 
 
 def guess_first_partition_size_offset(img):
-    out = subprocess.check_output(['sudo', 'kpartx', '-l', img])
+    with KPARTX_MUTEX:
+        out = subprocess.check_output(['sudo', 'kpartx', '-l', img])
     # loop0p1 : 0 4192256 /dev/loop0 2048
     # loop deleted : /dev/loop0
     first_part_txt = out.split('\n')[0].strip()
@@ -149,14 +154,16 @@ def get_dm_lv_name(lvpath):
 
 def activate_partitions(vdisk):
     vdisk = get_dm_lv_name(vdisk)
-    subprocess.check_call(['sudo', 'kpartx', '-a', vdisk])
+    with KPARTX_MUTEX:
+        subprocess.check_call(['sudo', 'kpartx', '-a', vdisk])
     fixup_vdisk_ownership(vdisk)
 
 
 def deactivate_partitions(vdisk, permissive=False):
     vdisk = get_dm_lv_name(vdisk)
     try:
-        subprocess.check_call(['sudo', 'kpartx', '-d', vdisk])
+        with KPARTX_MUTEX:
+            subprocess.check_call(['sudo', 'kpartx', '-d', vdisk])
     except subprocess.CalledProcessError:
         if not permissive:
             raise
