@@ -1,10 +1,12 @@
 
 import os
 import subprocess
+import threading
 
 from dnsutils import guess_fqdn
 
 KNOWN_HOSTS_FILE = os.path.expanduser('~/.ssh/known_hosts')
+KNOWN_HOSTS_MUTEX = threading.RLock()
 
 
 def get_authorized_keys(authorized_keys_file=None):
@@ -18,8 +20,9 @@ def get_authorized_keys(authorized_keys_file=None):
 def check_ssh_known_host(name_or_ip, known_hosts_file=KNOWN_HOSTS_FILE):
     """Check if the known_hosts_file contains ssh key of the given host"""
     try:
-        subprocess.check_call(['ssh-keygen', '-F', name_or_ip,
-                               '-f', known_hosts_file])
+        with KNOWN_HOSTS_MUTEX:
+            subprocess.check_call(['ssh-keygen', '-F', name_or_ip,
+                                   '-f', known_hosts_file])
         return True
     except subprocess.CalledProcessError as e:
         if e.returncode == 1:
@@ -33,8 +36,9 @@ def remove_ssh_known_host(name_or_ip, known_hosts_file=KNOWN_HOSTS_FILE):
     if not known_hosts_file:
         known_hosts_file = os.path.expanduser('~/.ssh/known_hosts')
     while check_ssh_known_host(name_or_ip, known_hosts_file=known_hosts_file):
-        subprocess.call(['ssh-keygen', '-f', known_hosts_file,
-                         '-R', name_or_ip])
+        with KNOWN_HOSTS_MUTEX:
+            subprocess.call(['ssh-keygen', '-f', known_hosts_file,
+                             '-R', name_or_ip])
 
 
 def update_known_hosts(ips=None, ssh_key=None,
@@ -56,8 +60,12 @@ def update_known_hosts(ips=None, ssh_key=None,
             remove_ssh_known_host(ip)
 
     if ssh_key:
-        with open(known_hosts_file, 'a') as f:
-            for ip, hostname in ips:
-                fqdn = guess_fqdn(ip=ip, hostname=hostname)
-                f.write('{fqdn},{ip} {key}\n'.format(fqdn=fqdn, ip=ip, key=ssh_key))
-            f.flush()
+        entries = []
+        for ip, hostname in ips:
+            fqdn = guess_fqdn(ip=ip, hostname=hostname)
+            entries.append('{fqdn},{ip} {key}'.format(fqdn=fqdn, ip=ip, key=ssh_key))
+        with KNOWN_HOSTS_MUTEX:
+            with open(known_hosts_file, 'a') as f:
+                for entry in entries:
+                    f.write(entry + '\n')
+                f.flush()
