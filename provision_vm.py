@@ -14,8 +14,14 @@ SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'
 CONFIG_DRIVE_MB = 4
 
+def _fixup_path():
+    if '/sbin' not in os.environ['PATH'].split(':'):
+        os.environ['PATH'] = '/sbin:' + os.environ['PATH']
+
+
 # XXX: kpartx uses /dev/loop0, so concurrent kpartx can lock up or give wrong results
 KPARTX_MUTEX = threading.RLock()
+_fixup_path()
 
 
 def _provision(vdisk, img=None,
