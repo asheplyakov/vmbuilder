@@ -29,12 +29,17 @@ WEB_CALLBACK_URL = 'http://{hypervisor_ip}:8080'
 def rebuild_vms(vm_dict,
                 cluster_def=None,
                 redefine=False,
+                delete=False,
                 parallel=0,
                 parallel_provision=0):
     if vm_dict is None:
         vm_dict = cluster_def['hosts']
     vm_list = [(vm, role) for role in vm_dict for vm in vm_dict[role]]
     vm_count = len(vm_list)
+    if delete:
+        for vm, _ in vm_list:
+            destroy_vm(vm, undefine=True, purge=True)
+        return
 
     vm_conf = cluster_def['vm_conf']
     storage_conf = cluster_def['storage_conf']
@@ -173,6 +178,9 @@ def main():
     parser.add_option('-r', '--redefine', dest='redefine',
                       default=False, action='store_true',
                       help='redefine VM according to template')
+    parser.add_option('-d', '--delete', dest='delete',
+                      default=False, action='store_true',
+                      help='remove specified VMs and reclaim their disk space')
     parser.add_option('-j', '--parallel', dest='parallel',
                       type=int, default=0,
                       help='concurrency level (default: # of VMs)')
@@ -200,6 +208,7 @@ def main():
     rebuild_vms(vm_dict,
                 cluster_def=cluster_def,
                 redefine=options.redefine,
+                delete=options.delete,
                 parallel=options.parallel,
                 parallel_provision=options.parallel_provision)
 

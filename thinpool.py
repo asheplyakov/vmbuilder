@@ -15,7 +15,9 @@ class NoSuchVG(exceptions.Exception):
     pass
 
 
-def remove_lv(lv=None, vg=None):
+def remove_lv(lv=None, vg=None, dev=None):
+    if dev is not None:
+        vg, lv = _canonicalize_lv_path(dev)
     cmd = ['sudo', 'lvremove', '-f', '{0}/{1}'.format(vg, lv)]
     try:
         subprocess.check_call(cmd)

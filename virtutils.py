@@ -5,6 +5,7 @@ import subprocess
 from xml.etree import ElementTree
 
 from sshutils import update_known_hosts, KNOWN_HOSTS_FILE
+from thinpool import remove_lv
 
 LIBVIRT_CONNECTION = 'qemu:///system'
 
@@ -48,6 +49,11 @@ def _get_leases_file_name(net_name):
 
 def _enumerate_network_devices(node_xml):
     return node_xml.findall("devices/interface[@type='network']")
+
+
+def enumerate_block_virtual_drives(vmxml):
+    return [dev.find('source').get('dev')
+            for dev in vmxml.findall("devices/disk[@type='block']")]
 
 
 def _get_devices_by_source_net(node_xml):
@@ -145,6 +151,11 @@ def get_vm_ips(name, conn=LIBVIRT_CONNECTION):
     return _get_vm_ips(dom_xml, conn=conn)
 
 
+def get_vm_vhds(name, conn=LIBVIRT_CONNECTION):
+    dom_xml = _virsh_dumpxml(name, conn=conn)
+    return enumerate_block_virtual_drives(dom_xml)
+
+
 def get_vm_macs(vm_name, conn=LIBVIRT_CONNECTION):
     """Get VM mac addresses along with source network names"""
     if not vm_exists(vm_name, conn):
@@ -179,7 +190,14 @@ def define_vm(vm_xml=None, raw_vm_xml=None, conn=LIBVIRT_CONNECTION):
         raise
 
 
-def destroy_vm(name, undefine=False, conn=LIBVIRT_CONNECTION):
+def wait4state(name, state, conn=LIBVIRT_CONNECTION):
+    event_cmd = ['virsh', '-c', conn, 'event', '--event=lifecycle', name]
+    state_cmd = ['virsh', '-c', conn, 'domstate', name]
+    while subprocess.check_output(state_cmd).strip() != state:
+        subprocess.check_call(event_cmd)
+
+
+def destroy_vm(name, undefine=False, purge=False, conn=LIBVIRT_CONNECTION):
     try:
         cmd = ['virsh', '-c', conn, 'domstate', name]
         state = subprocess.check_output(cmd).strip()
@@ -189,6 +207,12 @@ def destroy_vm(name, undefine=False, conn=LIBVIRT_CONNECTION):
     if state.strip() == 'running':
         remove_vm_ssh_keys(vm_name=name, conn=conn)
         subprocess.check_call(['virsh', '-c', conn, 'destroy', name])
+
+    if purge:
+        wait4state(name, 'shut off')
+        for vhd in get_vm_vhds(name, conn=conn):
+            remove_lv(vhd)
+
     if undefine:
         subprocess.check_call(['virsh', '-c', conn, 'undefine', name])
 
