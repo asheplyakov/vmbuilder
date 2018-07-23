@@ -75,9 +75,11 @@ def rebuild_vms(vm_dict,
         # it's ok to start one more VM
         vm_start_throttle_sem.release()
 
+    inventory = 'hosts_%s.txt' % cluster_def.get('cluster_name', 'unknown')
     callback_worker = CloudInitWebCallback([web_callback_addr],
-                                           vms2wait=vms2wait,
-                                           vm_ready_hooks=[vm_ready_cb])
+                                           vms2wait=dict(vm_list),
+                                           vm_ready_hooks=[vm_ready_cb],
+                                           inventory_filename=inventory)
     tpool = ThreadPool(processes=parallel_provision)
 
     # runs in the provisioning thread
