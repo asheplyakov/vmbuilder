@@ -3,7 +3,9 @@ import os
 import subprocess
 import threading
 
+from collections import OrderedDict
 from dnsutils import guess_fqdn
+from miscutils import mkdir_p, safe_save_file
 
 KNOWN_HOSTS_FILE = os.path.expanduser('~/.ssh/known_hosts')
 KNOWN_HOSTS_MUTEX = threading.RLock()
@@ -69,3 +71,32 @@ def update_known_hosts(ips=None, ssh_key=None,
                 for entry in entries:
                     f.write(entry + '\n')
                 f.flush()
+
+
+class SshConfigGenerator(object):
+    """Prepare ~/.ssh/config alike file"""
+    def __init__(self, path=None, user='root'):
+        self._path = path if path else '.ssh/config'
+        self._user = user
+        self._hosts = OrderedDict()
+        self._template = 'Host {host}\n'\
+                         '  HostName {ip}\n'\
+                         '  User {user}\n'
+
+    def _write(self, thefile):
+        for host, ip in self._hosts.iteritems():
+            thefile.write(self._template.format(host=host, ip=ip,
+                                                user=self._user))
+        thefile.flush()
+
+    def add(self, hostname, ip, ssh_key):
+        self._hosts[hostname] = ip
+
+    def update(self, hostname, ip, ssh_key):
+        self.add(hostname, ip, ssh_key)
+        self.write()
+
+    def write(self):
+        mkdir_p(os.path.dirname(self._path))
+        with safe_save_file(self._path) as f:
+            self._write(f)

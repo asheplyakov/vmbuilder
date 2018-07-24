@@ -1,11 +1,22 @@
 
 # encoding: utf-8
+import errno
 import os
 import random
 import string
 import subprocess
 
 from contextlib import contextmanager
+
+
+def mkdir_p(thedir):
+    try:
+        os.makedirs(thedir)
+    except OSError as err:
+        if err.errno == errno.EEXIST and os.path.isdir(thedir):
+            pass
+        else:
+            raise
 
 
 def make_temp_filename(filename, prefix_len=8):

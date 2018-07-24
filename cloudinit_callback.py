@@ -11,7 +11,7 @@ import web
 from optparse import OptionParser
 from threading import Thread
 
-from sshutils import update_known_hosts
+from sshutils import update_known_hosts, SshConfigGenerator
 from miscutils import safe_save_file
 
 
@@ -98,11 +98,13 @@ class CloudInitWebCallback(object):
 
         self._inventory_generator = InventoryGenerator(vms2wait,\
             filename=inventory_filename)
+        self._ssh_config_generator = SshConfigGenerator()
 
         # defines the actual actions with VM info
         self._async_hooks = [
             self._update_ssh_known_hosts,
             self._inventory_generator.update,
+            self._ssh_config_generator.update,
             self._report_vm_ready,
         ]
         if async_hooks:
