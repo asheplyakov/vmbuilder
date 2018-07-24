@@ -12,6 +12,7 @@ from optparse import OptionParser
 from threading import Thread
 
 from sshutils import update_known_hosts
+from miscutils import safe_save_file
 
 
 class VMRegister(object):
@@ -63,21 +64,12 @@ class InventoryGenerator(object):
                 thefile.write(entry + '\n')
         thefile.flush()
 
-    def _make_temp_filename(self):
-        LEN = 8
-        suffix = ''.join(random.choice(string.ascii_letters + string.digits)
-                         for _ in range(LEN))
-        name = '.' + suffix + '_' + os.path.basename(self._filename)
-        return os.path.join(os.path.dirname(self._filename), name)
-
     def write(self):
         if self._filename is None:
             self._write(sys.stdout)
         else:
-            tmpfile_name = self._make_temp_filename()
-            with open(tmpfile_name, 'w') as f:
+            with safe_save_file(self._filename) as f:
                 self._write(f)
-            os.rename(tmpfile_name, self._filename)
 
 
 class CloudInitWebCallback(object):
