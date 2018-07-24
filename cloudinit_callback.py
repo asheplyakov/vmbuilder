@@ -44,14 +44,14 @@ class InventoryGenerator(object):
                                       for host, role
                                       in hosts_with_roles.iteritems())
 
-    def add(self, hostname, ip):
+    def add(self, hostname, ip, ssh_key):
         short_hostname = hostname.split('.')[0]
         entry = {'host': short_hostname, 'ip': ip}
         role = self._hosts_with_roles.get(short_hostname, 'all')
         self._inventory[role].append(entry)
 
-    def update(self, hostname, ip):
-        self.add(hostname, ip)
+    def update(self, hostname, ip, ssh_key):
+        self.add(hostname, ip, ssh_key)
         self.write()
 
     def _write(self, thefile):
@@ -80,11 +80,12 @@ class CloudInitWebCallback(object):
     - manages VMs' ssh public keys in the local ~/.ssh/known_hosts file
     """
     def __init__(self, httpd_args, vms2wait=None, vm_ready_hooks=None,
+                 async_hooks=None,
                  inventory_filename=None):
         self.vms2wait = vms2wait if vms2wait else {}
 
         self._ssh_keys_queue = Queue.Queue()
-        self._ssh_keys_thread = Thread(target=self._ssh_keys_updater)
+        self._async_hooks_thread = Thread(target=self._async_worker)
 
         # mangle sys.argv to pass the listen address to webpy
         new_argv = [sys.argv[0]]
@@ -98,6 +99,15 @@ class CloudInitWebCallback(object):
         self._inventory_generator = InventoryGenerator(vms2wait,\
             filename=inventory_filename)
 
+        # defines the actual actions with VM info
+        self._async_hooks = [
+            self._update_ssh_known_hosts,
+            self._inventory_generator.update,
+            self._report_vm_ready,
+        ]
+        if async_hooks:
+            self._async_hooks.extend(async_hooks)
+
         urls = ('/', 'VMRegister')
         self._app = web.application(urls, globals())
         self._install_callback()
@@ -107,19 +117,20 @@ class CloudInitWebCallback(object):
         # invoked by web app on POST
         self._ssh_keys_queue.put(kwargs)
 
-    def _ssh_keys_updater(self):
+    def _update_ssh_known_hosts(self, hostname, ip, ssh_key):
+        update_known_hosts(ssh_key=ssh_key, ips=[(ip, hostname)])
+
+    def _report_vm_ready(self, hostname, ip, ssh_key):
+        print("vm {0} ready, ssh_key: {1}".format(hostname, ssh_key))
+
+    def _async_worker(self):
         seen_vms = set()
         vms2wait = set(self.vms2wait.keys())
         while seen_vms != vms2wait:
             vm_dat = self._ssh_keys_queue.get()
-            vm_name = vm_dat['hostname']
-            ssh_key = vm_dat['ssh_key']
-            update_known_hosts(ssh_key=ssh_key, ips=[(vm_dat['ip'], vm_name)])
-            self._inventory_generator.add(vm_name, vm_dat['ip'])
-            self._inventory_generator.write()
-
+            for hook in self._async_hooks:
+                hook(vm_dat['hostname'], vm_dat['ip'], vm_dat['ssh_key'])
             seen_vms.add(vm_dat['hostname'])
-            print("vm {0} ready, ssh key: {1}".format(vm_name, ssh_key))
         self._app.stop()
 
     def _vm_called_back(self, **kwargs):
@@ -141,12 +152,12 @@ class CloudInitWebCallback(object):
         self._app.add_processor(_install_callback())
 
     def start(self):
-        self._ssh_keys_thread.start()
+        self._async_hooks_thread.start()
         self._webapp_thread.start()
 
     def join(self):
         self._webapp_thread.join()
-        self._ssh_keys_thread.join()
+        self._async_hooks_thread.join()
 
 
 def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None):
