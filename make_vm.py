@@ -78,7 +78,13 @@ def make_vm_xml(vm_name=None,
     env.globals.update(osd_lv_name=data_lv_name)
     tpl = env.get_or_select_template(template)
     raw_out = tpl.render(vm_params)
-    new_vm_xml = ElementTree.fromstring(raw_out)
+    try:
+        new_vm_xml = ElementTree.fromstring(raw_out)
+    except:
+        num_out = '\n'.join('%d: %s' % (n, s)
+                            for n, s in enumerate(raw_out.split('\n')))
+        print("failed to parse string as XML:\n %s" % num_out)
+        raise
     return new_vm_xml
 
 
