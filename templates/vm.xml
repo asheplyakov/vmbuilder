@@ -1,4 +1,13 @@
+{% if graphics.spice|default(False) %}
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <!-- Make qxl KMS capable -->
+  <qemu:commandline>
+    <qemu:arg value='-global'/>
+    <qemu:arg value='qxl-vga.revision=4'/>
+  </qemu:commandline>
+{% else %}
 <domain type='kvm'>
+{% endif %}
   <name>{{ vm_name }}</name>
   <memory unit='MiB'>{{ ram_mb }}</memory>
   <currentMemory unit='MiB'>{{ ram_mb }}</currentMemory>
