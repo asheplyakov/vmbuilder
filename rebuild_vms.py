@@ -12,7 +12,7 @@ from threading import Semaphore
 
 from gen_cloud_conf import generate_cc
 from make_vm import os_lv_name, redefine_vm
-from miscutils import refresh_sudo_credentials
+from miscutils import refresh_sudo_credentials, forward_thread_exceptions
 from provision_vm import provision
 from driveutils import vg_is_ssd
 from virtutils import destroy_vm, start_vm, libvirt_net_host_ip
@@ -83,6 +83,7 @@ def rebuild_vms(vm_dict,
     tpool = ThreadPool(processes=parallel_provision)
 
     # runs in the provisioning thread
+    @forward_thread_exceptions(provisioned)
     def _rebuild_vm(name_role):
         vm_name, role = name_role
         if redefine:
@@ -107,8 +108,14 @@ def rebuild_vms(vm_dict,
     tpool.map_async(_rebuild_vm, vm_list)
 
     started = set()
+    extype, exvalue, bt = None, None, None
     while started != vms2wait:
         vm_name = provisioned.get()
+        if isinstance(vm_name, tuple):
+            # error happend while provisioning the VM
+            callback_worker.stop()
+            extype, exvalue, bt = vm_name
+            break
         # at most *parallel* VMs concurrently booting the provisioned OS
         vm_start_throttle_sem.acquire()
         start_vm(vm_name)
@@ -117,6 +124,8 @@ def rebuild_vms(vm_dict,
     tpool.close()
     tpool.join()
     callback_worker.join()
+    if extype is not None:
+        raise extype, exvalue, bt
 
 
 def prepare_cloud_img(source_image_data, cluster_def=None, force=False):

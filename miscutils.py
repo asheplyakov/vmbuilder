@@ -5,8 +5,29 @@ import os
 import random
 import string
 import subprocess
+import traceback
+import sys
 
 from contextlib import contextmanager
+
+
+def forward_thread_exceptions(queue):
+    """Catch all exceptions and put exception info into the given queue"""
+
+    def actual_decorator(f):
+
+        def wrapper(*args, **kwargs):
+            try:
+                f(*args, **kwargs)
+            except:
+                traceback.print_exc()
+                extype, exval, bt = sys.exc_info()
+                data = (extype, exval, bt)
+                queue.put(data)
+
+        return wrapper
+
+    return actual_decorator
 
 
 def mkdir_p(thedir):
