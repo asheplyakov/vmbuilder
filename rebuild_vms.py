@@ -91,6 +91,7 @@ def rebuild_vms(vm_dict,
                         role=role,
                         vm_conf=vm_conf,
                         storage_conf=storage_conf,
+                        graphics_conf=cluster_def.get('graphics', {}),
                         net_conf=cluster_def['networks'])
         config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name, distro=distro)
         vdisk = '/dev/{vg}/{lv}'.format(vg=storage_conf['os']['vg'],
@@ -160,6 +161,7 @@ def make_cloud_conf_data(cluster_def):
         'distro_release': cluster_def['distro_release'],
         'swap_size': cluster_def['vm_conf']['swap_size'],
         'swap_label': cluster_def['vm_conf']['swap_label'],
+        'graphics': cluster_def.get('graphics', {}),
     }
     if 'ceph_release' in cluster_def:
         cloud_conf_data['ceph_release'] = cluster_def['ceph_release']

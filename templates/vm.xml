@@ -69,12 +69,28 @@
     </console>
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
+{% if graphics.spice|default(False) %}
+    <graphics type='spice' port='-1' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='qxl' vram='16384' heads='1'/>
+    </video>
+    <channel type='spicevmc'>
+      <target type='virtio' name='com.redhat.spice.0'/>
+    </channel>
+    <channel type='spiceport'>
+      <source channel='org.spice-space.webdav.0'/>
+      <target type='virtio' name='org.spice-space.webdav.0'/>
+    </channel>
+{% else %}
     <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
     </graphics>
     <video>
       <model type='cirrus' vram='9216' heads='1'/>
     </video>
+{% endif %}
     <memballoon model='virtio'>
     </memballoon>
   </devices>

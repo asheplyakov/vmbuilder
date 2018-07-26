@@ -51,6 +51,7 @@ def make_vm_xml(vm_name=None,
                 vm_conf=None,
                 storage_conf=None,
                 net_conf=None,
+                graphics_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 conn=LIBVIRT_CONNECTION):
@@ -67,6 +68,8 @@ def make_vm_xml(vm_name=None,
                      cpu_count=vm_cpu_count(role, osds_per_node),
                      journal_lv_name=journal_lv_name(vm_name),
                      drives=storage_conf)
+    # graphics - spice or vnc?
+    vm_params.update(graphics=(graphics_conf or {}))
     # keep MAC addresses stable across VM re-definitions
     old_ifaces = get_vm_macs(vm_name, conn=conn)
     ifaces = dict((name, {'source_net': iface['source_net'],
@@ -115,6 +118,7 @@ def redefine_vm(vm_name=None,
                 vm_conf=None,
                 storage_conf=None,
                 net_conf=None,
+                graphics_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 dry_run=False,
@@ -124,6 +128,7 @@ def redefine_vm(vm_name=None,
                              vm_conf=vm_conf,
                              storage_conf=storage_conf,
                              net_conf=net_conf,
+                             graphics_conf=graphics_conf,
                              template=template,
                              template_dir=template_dir,
                              conn=conn)
