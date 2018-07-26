@@ -9,7 +9,7 @@ import string
 import sys
 import web
 from optparse import OptionParser
-from threading import Thread
+from threading import Thread, Event
 
 from sshutils import update_known_hosts, SshConfigGenerator
 from miscutils import safe_save_file
@@ -83,6 +83,7 @@ class CloudInitWebCallback(object):
                  async_hooks=None,
                  inventory_filename=None):
         self.vms2wait = vms2wait if vms2wait else {}
+        self._stop_event = Event()
 
         self._ssh_keys_queue = Queue.Queue()
         self._async_hooks_thread = Thread(target=self._async_worker)
@@ -130,6 +131,10 @@ class CloudInitWebCallback(object):
         vms2wait = set(self.vms2wait.keys())
         while seen_vms != vms2wait:
             vm_dat = self._ssh_keys_queue.get()
+            if self._stop_event.is_set():
+                break
+            if vm_dat is None:
+                continue
             for hook in self._async_hooks:
                 hook(vm_dat['hostname'], vm_dat['ip'], vm_dat['ssh_key'])
             seen_vms.add(vm_dat['hostname'])
@@ -160,6 +165,12 @@ class CloudInitWebCallback(object):
     def join(self):
         self._webapp_thread.join()
         self._async_hooks_thread.join()
+
+    def stop(self):
+        self._stop_event.set()
+        # _async_worker can be blocked on get(), so put something to
+        # the queue to wake it up
+        self._ssh_keys_queue.put(None)
 
 
 def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None):
