@@ -1,14 +1,6 @@
-#cloud-config
+{% extends "generic/config-drive/user-data" %}
 
-chpasswd:
-  list: |
-    root:r00tme
-    fedora:fedora
-  expire: False
-ssh_pwauth: True
-disable_root: False
-ssh_authorized_keys:{% for key in ssh_authorized_keys %}
- - {{ key }}{% endfor %}
+{% block content %}
 
 {% if swap_label %}
 bootcmd:
@@ -35,9 +27,4 @@ runcmd:
  - systemctl start spice-webdavd
 {% endif %}
 
-{% if web_callback_url %}
-phone_home:
-  url: {{ web_callback_url }}
-  post: [ hostname, pub_key_rsa ]
-{% endif %}
-
+{% endblock %}

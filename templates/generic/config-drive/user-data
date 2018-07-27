@@ -1,0 +1,33 @@
+#cloud-config
+
+{% block users %}
+
+users:
+ - name: {{ whoami }}
+   lock_password: true
+   groups: wheel, users
+   sudo: "ALL=(ALL) NOPASSWD:ALL"
+   ssh_authorized_keys:{% for key in ssh_authorized_keys %}
+    - {{ key }}{% endfor %}
+
+chpasswd:
+  list: |
+    root:r00tme
+
+ssh_pwauth: True
+disable_root: False
+
+ssh_authorized_keys:{% for key in ssh_authorized_keys %}
+ - {{ key }}{% endfor %}
+
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+{% block web_callback %}
+{% if web_callback_url %}
+phone_home:
+  url: {{ web_callback_url }}
+  post: [ hostname, pub_key_rsa ]
+{% endif %}
+{% endblock %}
