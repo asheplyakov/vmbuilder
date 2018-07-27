@@ -15,8 +15,7 @@ def get_authorized_keys(authorized_keys_file=None):
     if not authorized_keys_file:
         authorized_keys_file = os.path.expanduser('~/.ssh/authorized_keys')
     with open(authorized_keys_file, 'r') as f:
-        keys = f.readlines()
-    return keys
+        return [l for l in f if not l.startswith('#')]
 
 
 def check_ssh_known_host(name_or_ip, known_hosts_file=KNOWN_HOSTS_FILE):
