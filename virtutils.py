@@ -211,7 +211,7 @@ def destroy_vm(name, undefine=False, purge=False, conn=LIBVIRT_CONNECTION):
     if purge:
         wait4state(name, 'shut off')
         for vhd in get_vm_vhds(name, conn=conn):
-            remove_lv(vhd)
+            remove_lv(dev=vhd)
 
     if undefine:
         subprocess.check_call(['virsh', '-c', conn, 'undefine', name])
