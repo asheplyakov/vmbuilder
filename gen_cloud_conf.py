@@ -13,48 +13,64 @@ from sshutils import get_authorized_keys
 
 MY_DIR = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(MY_DIR, '.build/config-drive')
-TEMPLATE_DIR = os.path.join(MY_DIR, 'templates/{distro}/config-drive')
+TEMPLATE_DIR = os.path.join(MY_DIR, 'templates')
 
 
-def render_and_save(data, vm_name=None, template_dir=None):
-    base_dir = os.path.join(BUILD_DIR, vm_name)
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir)
+class NoCloudGenerator(object):
+    def __init__(self, vm_name=None, distro=None, template_dir=None):
+        self.vm_name = vm_name or 'vm'
+        self.distro = distro or 'ubuntu'
+        self.template_dir = template_dir or TEMPLATE_DIR
+        self._base_dir = os.path.join(BUILD_DIR, vm_name)
+        self._iso_path = os.path.join(BUILD_DIR, '%s-config.iso' % vm_name)
 
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
+    def _write(self, strdat, name):
+        if not os.path.exists(self._base_dir):
+            print("mkdir -p %s" % self._base_dir)
+            os.makedirs(self._base_dir)
+        with open(os.path.join(self._base_dir, name), 'w') as f:
+            f.write(strdat)
+            f.flush()
 
-    for name in ('user-data', 'meta-data'):
-        template = env.get_or_select_template(name)
-        out = template.render(data)
-        out_file = os.path.join(base_dir, name)
-        with open(out_file, 'w') as f:
-            f.write(out)
+    def _prepare(self, data):
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(self.template_dir))
+        for what in ('user-data', 'meta-data'):
+            template_path = '{0}/config-drive/{1}'.format(self.distro, what)
+            template = env.get_or_select_template(template_path)
+            out = template.render(data)
+            self._write(out, what)
 
-    return base_dir
+    def _make_iso(self):
+        tmp_iso = '%s.tmp' % self._iso_path
+        subprocess.check_call(['genisoimage',
+                               '-quiet',
+                               '-input-charset', 'utf-8',
+                               '-volid', 'cidata',
+                               '-joliet',
+                               '-rock',
+                               '-output', tmp_iso,
+                               self._base_dir])
+        shutil.move(tmp_iso, self._iso_path)
+
+    def generate(self, data):
+        self._prepare(data)
+        self._make_iso()
+        return self._iso_path
 
 
-def gen_iso(src, dst):
-    subprocess.check_call(['genisoimage',
-                           '-quiet',
-                           '-input-charset', 'utf-8',
-                           '-volid', 'cidata',
-                           '-joliet',
-                           '-rock',
-                           '-output', '{}.tmp'.format(dst),
-                           src])
-    shutil.move('{}.tmp'.format(dst), dst)
-
-
-def generate_cc(dat, vm_name=None, tmpl_dir=TEMPLATE_DIR, distro='ubuntu'):
-    template_dir = tmpl_dir.format(distro=distro)
+def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR, distro='ubuntu'):
     data = copy.deepcopy(dat)
-    data['ssh_authorized_keys'] = get_authorized_keys()
-    data['my_name'] = vm_name
-    data['my_uuid'] = uuid.uuid4()
-    out_dir = render_and_save(data, vm_name=vm_name, template_dir=template_dir)
-    conf_img = os.path.join(BUILD_DIR, '{}-config.iso'.format(vm_name))
-    gen_iso(out_dir, conf_img)
-    return conf_img
+    extra_data = {
+        'ssh_authorized_keys': get_authorized_keys(),
+        'my_name': vm_name,
+        'my_uuid': uuid.uuid4(),
+        'whoami': os.environ['USER'],
+        'distro': distro,
+    }
+    data.update(extra_data)
+    gen = NoCloudGenerator(vm_name=vm_name, distro=distro,
+                           template_dir=template_dir)
+    return gen.generate(data)
 
 
 def main():
