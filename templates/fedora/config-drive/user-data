@@ -25,6 +25,15 @@ runcmd:
  - yum install -y openssh-server
  - systemctl enable sshd
  - systemctl start sshd
+{% if graphics.spice|default(False) %}
+ - yum install -y spice-vdagent
+ - yum install -y spice-webdavd
+ - yum install -y gvfs gvfs-fuse
+ - systemctl enable spice-vdagent
+ - systemctl start spice-vdagent
+ - systemctl enable spice-webdavd
+ - systemctl start spice-webdavd
+{% endif %}
 
 {% if web_callback_url %}
 phone_home:
