@@ -25,7 +25,7 @@ runcmd:
  - yum install -y openssh-server
  - systemctl enable sshd
  - systemctl start sshd
-{% if graphics.spice|default(False) %}
+{% if (graphics|default({})).spice|default(False) %}
  - yum install -y spice-vdagent
  - yum install -y spice-webdavd
  - yum install -y gvfs gvfs-fuse

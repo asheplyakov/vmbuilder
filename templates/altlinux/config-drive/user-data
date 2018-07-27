@@ -23,7 +23,7 @@ write_files:
    content: |
      Acquire::http::proxy "{{ http_proxy }}";
 {% endif %}
-{% if graphics.spice|default(False) %}
+{% if (graphics|default({})).spice|default(False) %}
  - path: /etc/systemd/system/spice-webdavd.target
    permissions: '0644'
    content: |
@@ -41,7 +41,7 @@ runcmd:
  - apt-get install -y openssh-server
  - systemctl enable sshd.service
  - systemctl start sshd.service
-{% if graphics.spice|default(False) %}
+{% if (graphics|default({})).spice|default(False) %}
  - apt-get install -y spice-vdagent spice-webdavd gvfs fuse-gvfs
  - systemctl enable spice-vdagentd.service
  - systemctl start spice-vdagentd.service
