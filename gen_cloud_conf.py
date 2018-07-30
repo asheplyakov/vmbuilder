@@ -9,7 +9,6 @@ import subprocess
 import sys
 import uuid
 
-from sshutils import get_authorized_keys
 
 MY_DIR = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(MY_DIR, '.build/config-drive')
@@ -58,17 +57,14 @@ class NoCloudGenerator(object):
         return self._iso_path
 
 
-def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR, distro='ubuntu'):
+def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR):
     data = copy.deepcopy(dat)
     extra_data = {
-        'ssh_authorized_keys': get_authorized_keys(),
         'my_name': vm_name,
         'my_uuid': uuid.uuid4(),
-        'whoami': os.environ['USER'],
-        'distro': distro,
     }
     data.update(extra_data)
-    gen = NoCloudGenerator(vm_name=vm_name, distro=distro,
+    gen = NoCloudGenerator(vm_name=vm_name, distro=dat['distro'],
                            template_dir=template_dir)
     return gen.generate(data)
 

@@ -15,6 +15,7 @@ from make_vm import os_lv_name, redefine_vm
 from miscutils import refresh_sudo_credentials, forward_thread_exceptions
 from provision_vm import provision
 from driveutils import vg_is_ssd
+from sshutils import get_authorized_keys
 from virtutils import destroy_vm, start_vm, libvirt_net_host_ip
 from cloudinit_callback import CloudInitWebCallback
 
@@ -93,7 +94,7 @@ def rebuild_vms(vm_dict,
                         storage_conf=storage_conf,
                         graphics_conf=cluster_def.get('graphics', {}),
                         net_conf=cluster_def['networks'])
-        config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name, distro=distro)
+        config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name)
         vdisk = '/dev/{vg}/{lv}'.format(vg=storage_conf['os']['vg'],
                                         lv=os_lv_name(vm_name))
         destroy_vm(vm_name)
@@ -157,11 +158,13 @@ def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
 
 def make_cloud_conf_data(cluster_def):
     cloud_conf_data = {
+        'ssh_authorized_keys': get_authorized_keys(),
         'distro': cluster_def['distro'],
         'distro_release': cluster_def['distro_release'],
         'swap_size': cluster_def['vm_conf']['swap_size'],
         'swap_label': cluster_def['vm_conf']['swap_label'],
         'graphics': cluster_def.get('graphics', {}),
+        'whoami': os.environ['USER'],
     }
     if 'ceph_release' in cluster_def:
         cloud_conf_data['ceph_release'] = cluster_def['ceph_release']
