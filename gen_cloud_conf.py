@@ -60,8 +60,8 @@ class NoCloudGenerator(object):
 def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR):
     data = copy.deepcopy(dat)
     extra_data = {
-        'my_name': vm_name,
-        'my_uuid': uuid.uuid4(),
+        'vm_name': vm_name,
+        'vm_uuid': uuid.uuid4(),
     }
     data.update(extra_data)
     gen = NoCloudGenerator(vm_name=vm_name, distro=dat['distro'],

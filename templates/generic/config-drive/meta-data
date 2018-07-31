@@ -1,4 +1,4 @@
 {% block nocloud_meta %}
-instance-id: {{ my_uuid }}
-local-hostname: {{ my_name }}
+instance-id: {{ vm_uuid }}
+local-hostname: {{ vm_name }}
 {% endblock %}
