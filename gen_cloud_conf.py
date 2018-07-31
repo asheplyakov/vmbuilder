@@ -11,7 +11,7 @@ import uuid
 
 
 MY_DIR = os.path.abspath(os.path.dirname(__file__))
-BUILD_DIR = os.path.join(MY_DIR, '.build/config-drive')
+BUILD_DIR = os.path.expanduser('~/.cache/vmbuilder/config-drive')
 TEMPLATE_DIR = os.path.join(MY_DIR, 'templates')
 
 
