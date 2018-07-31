@@ -145,18 +145,6 @@ def redefine_vm(vm_name=None,
                       storage_conf=storage_conf)
 
 
-def make_ansible_inventory(hosts_by_role,
-                           template_dir=TEMPLATE_DIR,
-                           template='ansible_hosts',
-                           filename='hosts'):
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
-    tpl = env.get_or_select_template(template)
-    raw_out = tpl.render(hosts_by_role)
-    with open(filename, 'w') as f:
-        f.write(raw_out)
-        f.flush()
-
-
 def main():
     parser = optparse.OptionParser()
     parser.add_option('-c', '--cluster', dest='paramfile',
@@ -167,9 +155,6 @@ def main():
     parser.add_option('-g', '--generate', dest='generate',
                       action='store_true', default=False,
                       help='only write VM XML into file')
-    parser.add_option('-i', '--inventory', dest='inventory',
-                      action='store_true', default=False,
-                      help='write ansible inventory file')
     options, args = parser.parse_args()
     if not options.paramfile:
         raise ValueError("cluster parameters file must be given")
@@ -189,8 +174,6 @@ def main():
                     net_conf=cluster_def['networks'],
                     template=options.template,
                     dry_run=options.generate)
-    if options.inventory:
-        make_ansible_inventory(cluster_def['hosts'])
 
 
 if __name__ == '__main__':
