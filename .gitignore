@@ -6,3 +6,4 @@ config-drive/*/openstack/2012-08-10/meta_data.json
 *.qcow2
 *.py[co]
 *.iso
+*~
