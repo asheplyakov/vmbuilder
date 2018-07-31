@@ -1,4 +1,6 @@
 
+from __future__ import absolute_import
+
 # encoding: utf-8
 # Poor man's dnspython to avoid dependencies on non-standard modules
 

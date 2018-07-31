@@ -1,8 +1,9 @@
 
+from __future__ import absolute_import
 import os
 import stat
 
-from thinpool import vgs as lvm_vgs, NoSuchVG
+from .thinpool import vgs as lvm_vgs, NoSuchVG
 
 
 def partition_base_device(dev, abspath=False):

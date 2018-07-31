@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import copy
 import jinja2
 import optparse
@@ -9,10 +11,10 @@ import subprocess
 import sys
 import uuid
 
+from . import TEMPLATE_DIR
 
-MY_DIR = os.path.abspath(os.path.dirname(__file__))
+
 BUILD_DIR = os.path.expanduser('~/.cache/vmbuilder/config-drive')
-TEMPLATE_DIR = os.path.join(MY_DIR, 'templates')
 
 
 class NoCloudGenerator(object):

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import copy
 import jinja2
 import optparse
@@ -8,12 +10,11 @@ import shutil
 import yaml
 from xml.etree import ElementTree
 
-from virtutils import get_vm_macs, define_vm
-from virtutils import LIBVIRT_CONNECTION
-from thinpool import create_thin_lv
+from .virtutils import get_vm_macs, define_vm
+from .virtutils import LIBVIRT_CONNECTION
+from .thinpool import create_thin_lv
+from . import TEMPLATE_DIR
 
-MY_DIR = os.path.abspath(os.path.dirname(__file__))
-TEMPLATE_DIR = os.path.join(MY_DIR, 'templates')
 VM_TEMPLATE = 'vm.xml'
 
 

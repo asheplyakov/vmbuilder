@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import os
 import subprocess
 from xml.etree import ElementTree
 
-from sshutils import update_known_hosts, KNOWN_HOSTS_FILE
-from thinpool import remove_lv
+from .sshutils import update_known_hosts, KNOWN_HOSTS_FILE
+from .thinpool import remove_lv
 
 LIBVIRT_CONNECTION = 'qemu:///system'
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import optparse
 import os
 import Queue
@@ -10,14 +12,14 @@ from collections import defaultdict
 from multiprocessing.pool import ThreadPool as ThreadPool
 from threading import Semaphore
 
-from gen_cloud_conf import generate_cc
-from make_vm import os_lv_name, redefine_vm
-from miscutils import refresh_sudo_credentials, forward_thread_exceptions
-from provision_vm import provision
-from driveutils import vg_is_ssd
-from sshutils import get_authorized_keys
-from virtutils import destroy_vm, start_vm, libvirt_net_host_ip
-from cloudinit_callback import CloudInitWebCallback
+from .gen_cloud_conf import generate_cc
+from .make_vm import os_lv_name, redefine_vm
+from .miscutils import refresh_sudo_credentials, forward_thread_exceptions
+from .provision_vm import provision
+from .driveutils import vg_is_ssd
+from .sshutils import get_authorized_keys
+from .virtutils import destroy_vm, start_vm, libvirt_net_host_ip
+from .cloudinit_callback import CloudInitWebCallback
 
 MY_DIR = os.path.abspath(os.path.dirname(__file__))
 ## --- configuration section starts here --- ##
