@@ -78,6 +78,7 @@
     </console>
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
+    <input type='tablet' bus='usb'/>
 {% if graphics.spice|default(False) %}
     <graphics type='spice' port='-1' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
