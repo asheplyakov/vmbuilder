@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 import os
 import glob
 import stat
@@ -8,7 +10,7 @@ import sys
 import threading
 from optparse import OptionParser
 
-from miscutils import padded
+from .miscutils import padded
 
 SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'

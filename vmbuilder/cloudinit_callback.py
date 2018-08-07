@@ -2,8 +2,13 @@
 # coding: utf-8
 # Purpose: receives provisioned VMs info via cloud-init phone_home
 
+from __future__ import absolute_import
+
 import os
-import Queue
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 import random
 import string
 import sys
@@ -11,8 +16,8 @@ import web
 from optparse import OptionParser
 from threading import Thread, Event
 
-from sshutils import update_known_hosts, SshConfigGenerator
-from miscutils import safe_save_file
+from .sshutils import update_known_hosts, SshConfigGenerator
+from .miscutils import safe_save_file
 
 
 class VMRegister(object):

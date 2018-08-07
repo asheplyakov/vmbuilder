@@ -4,7 +4,10 @@ from __future__ import absolute_import
 
 import optparse
 import os
-import Queue
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 import subprocess
 import yaml
 

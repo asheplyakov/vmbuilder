@@ -1,5 +1,11 @@
 
-import exceptions
+from __future__ import absolute_import
+
+try:
+    import exceptions
+except ImportError:
+    import builtins as exceptions
+
 import subprocess
 
 from collections import defaultdict
