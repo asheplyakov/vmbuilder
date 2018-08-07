@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
+from __future__ import (absolute_import, division)
 
 import copy
 import jinja2
@@ -22,7 +22,7 @@ def calc_ram_size(role, base_ram=2048, osds_per_node=2):
     if role == 'osds':
         return base_ram * osds_per_node
     elif role == 'clients':
-        return base_ram / 2
+        return base_ram // 2
     else:
         return base_ram
 
