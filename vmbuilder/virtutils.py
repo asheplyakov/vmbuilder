@@ -3,9 +3,9 @@
 from __future__ import absolute_import
 
 import os
-import subprocess
 from xml.etree import ElementTree
 
+from .py3compat import subprocess
 from .sshutils import update_known_hosts, KNOWN_HOSTS_FILE
 from .thinpool import remove_lv
 

@@ -2,12 +2,12 @@
 from __future__ import absolute_import
 
 import os
-import subprocess
 import threading
 
 from collections import OrderedDict
 from .dnsutils import guess_fqdn
 from .miscutils import mkdir_p, safe_save_file
+from .py3compat import subprocess
 
 KNOWN_HOSTS_FILE = os.path.expanduser('~/.ssh/known_hosts')
 KNOWN_HOSTS_MUTEX = threading.RLock()

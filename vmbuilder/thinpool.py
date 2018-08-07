@@ -6,9 +6,10 @@ try:
 except ImportError:
     import builtins as exceptions
 
-import subprocess
 
 from collections import defaultdict
+from .py3compat import subprocess
+
 
 LVM_NO_SUCH_LV = 5
 

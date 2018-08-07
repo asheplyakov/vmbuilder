@@ -1,14 +1,16 @@
 
+from __future__ import absolute_import
+
 # encoding: utf-8
 import errno
 import os
 import random
 import string
-import subprocess
 import traceback
 import sys
 
 from contextlib import contextmanager
+from .py3compat import subprocess
 
 
 def forward_thread_exceptions(queue):

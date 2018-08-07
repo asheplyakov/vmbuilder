@@ -7,11 +7,11 @@ import jinja2
 import optparse
 import os
 import shutil
-import subprocess
 import sys
 import uuid
 
 from . import TEMPLATE_DIR
+from .py3compat import subprocess
 
 
 BUILD_DIR = os.path.expanduser('~/.cache/vmbuilder/config-drive')

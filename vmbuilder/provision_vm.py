@@ -5,12 +5,13 @@ from __future__ import absolute_import
 import os
 import glob
 import stat
-import subprocess
 import sys
 import threading
 from optparse import OptionParser
 
 from .miscutils import padded
+from .py3compat import subprocess
+
 
 SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'

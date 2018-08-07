@@ -9,7 +9,7 @@ try:
 except ImportError:
     import builtins as exceptions
 
-import subprocess
+from .py3compat import subprocess
 
 
 class NoSuchHost(exceptions.Exception):
