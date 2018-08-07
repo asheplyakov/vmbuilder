@@ -43,11 +43,11 @@ class InventoryGenerator(object):
     def __init__(self, hosts_with_roles, filename=None):
         self._filename = filename
         self._inventory = dict((role, [])
-                               for _, role in hosts_with_roles.iteritems())
+                               for _, role in hosts_with_roles.items())
         self._inventory['all'] = []
         self._hosts_with_roles = dict((host.split('.')[0], role)
                                       for host, role
-                                      in hosts_with_roles.iteritems())
+                                      in hosts_with_roles.items())
 
     def add(self, hostname, ip, ssh_key):
         short_hostname = hostname.split('.')[0]
@@ -61,7 +61,7 @@ class InventoryGenerator(object):
 
     def _write(self, thefile):
         entry_format = '{hostname} ansible_host={ip} ansible_user=root'
-        for role, hosts in self._inventory.iteritems():
+        for role, hosts in self._inventory.items():
             thefile.write('[%s]\n' % role)
             for host in hosts:
                 entry = entry_format.format(hostname=host['host'],

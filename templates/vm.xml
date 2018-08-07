@@ -61,7 +61,7 @@
     </disk>
 {% endfor %}
 {% endif %}
-{% for name, iface in interfaces.iteritems() %}
+{% for name, iface in interfaces.items() %}
     <interface type='network'>
       <source network='{{ iface.source_net }}'/>
 {% if iface.mac %}

@@ -85,7 +85,7 @@ class SshConfigGenerator(object):
                          '  User {user}\n'
 
     def _write(self, thefile):
-        for host, ip in self._hosts.iteritems():
+        for host, ip in self._hosts.items():
             thefile.write(self._template.format(host=host, ip=ip,
                                                 user=self._user))
         thefile.flush()

@@ -141,7 +141,7 @@ def keep_existing_mac_addresses(new_vm_xml, conn=LIBVIRT_CONNECTION):
         return
     vm_xml = _virsh_dumpxml(name, conn=conn)
     new_net_devices = _get_devices_by_source_net(new_vm_xml)
-    for src_net, old_dev in _get_devices_by_source_net(vm_xml).iteritems():
+    for src_net, old_dev in _get_devices_by_source_net(vm_xml).items():
         if src_net in new_net_devices:
             mac = _get_device_mac(old_dev)
             new_dev = new_net_devices[src_net]

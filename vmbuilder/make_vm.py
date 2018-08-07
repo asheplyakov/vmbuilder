@@ -75,7 +75,7 @@ def make_vm_xml(vm_name=None,
     old_ifaces = get_vm_macs(vm_name, conn=conn)
     ifaces = dict((name, {'source_net': iface['source_net'],
                           'mac': old_ifaces.get(iface['source_net'])})
-                  for name, iface in net_conf.iteritems())
+                  for name, iface in net_conf.items())
     vm_params.update(interfaces=ifaces)
 
     env.filters['hex'] = hex

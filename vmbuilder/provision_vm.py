@@ -86,7 +86,7 @@ def copy_boot_loader(vdisk, img=None,
                      first_partition_offset=None):
     def run_dd(**kwargs):
         cmd = ['dd', 'if=%s' % img, 'of=%s' % vdisk]
-        cmd.extend('{0}={1}'.format(k, v) for k, v in kwargs.iteritems())
+        cmd.extend('{0}={1}'.format(k, v) for k, v in kwargs.items())
         cmd.extend(['conv=fsync'])
         subprocess.check_call(cmd)
 
@@ -236,7 +236,7 @@ def fixup_vdisk_ownership(vdisk):
 
 def run_dd(src, dst, **kwargs):
     cmd = ['dd', 'if=%s' % src, 'of=%s' % dst]
-    cmd.extend('{0}={1}'.format(k, v) for k, v in kwargs.iteritems())
+    cmd.extend('{0}={1}'.format(k, v) for k, v in kwargs.items())
     subprocess.check_call(cmd)
 
 
