@@ -132,7 +132,7 @@ def rebuild_vms(vm_dict,
     tpool.join()
     callback_worker.join()
     if extype is not None:
-        raise extype, exvalue, bt
+        raise extype(exvalue, bt)
 
 
 def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
