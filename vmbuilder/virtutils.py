@@ -185,11 +185,11 @@ def define_vm(vm_xml=None, raw_vm_xml=None, conn=LIBVIRT_CONNECTION):
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-    try:
-        out, err = proc.communicate(input=raw_vm_xml)
-    except subprocess.CallledProcessError:
+    out, err = proc.communicate(raw_vm_xml)
+    rc = proc.poll()
+    if rc != 0:
         print("define_vm: error: %s" % str(err))
-        raise
+        raise RuntimeError(err)
 
 
 def wait4state(name, state, conn=LIBVIRT_CONNECTION):
