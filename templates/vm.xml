@@ -76,9 +76,11 @@
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
+{% if not(graphics.disabled|default(False)) %}
     <input type='mouse' bus='ps2'/>
     <input type='keyboard' bus='ps2'/>
     <input type='tablet' bus='usb'/>
+{% endif %}
 {% if graphics.spice|default(False) %}
     <graphics type='spice' port='-1' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
@@ -93,7 +95,7 @@
       <source channel='org.spice-space.webdav.0'/>
       <target type='virtio' name='org.spice-space.webdav.0'/>
     </channel>
-{% else %}
+{% elif not(graphics.disabled|default(False)) %}
     <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>
     </graphics>
