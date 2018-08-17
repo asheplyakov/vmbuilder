@@ -44,7 +44,7 @@ def rebuild_vms(vm_dict,
     vm_count = len(vm_list)
     if delete:
         for vm, _ in vm_list:
-            destroy_vm(vm, undefine=True, purge=True)
+            destroy_vm(vm['name'], undefine=True, purge=True)
         return
 
     vm_conf = cluster_def['vm_conf']
@@ -71,9 +71,8 @@ def rebuild_vms(vm_dict,
 
     vm_start_throttle_sem = Semaphore(parallel)
     provisioned = Queue.Queue()
-    vms2wait = set([vm for vm, _ in vm_list])
-    web_callback_url = cloud_conf_data['web_callback_url']
-    web_callback_addr = web_callback_url.split('http://', 1)[1]
+    vms2wait = set([vm['name'] for vm, _ in vm_list])
+    web_callback_addr = make_cloud_conf_data(cluster_def)['web_callback_addr']
 
     # runs in the web callback thread
     def vm_ready_cb(**kwargs):
@@ -83,7 +82,8 @@ def rebuild_vms(vm_dict,
 
     inventory = 'hosts_%s.txt' % cluster_def.get('cluster_name', 'unknown')
     callback_worker = CloudInitWebCallback([web_callback_addr],
-                                           vms2wait=dict(vm_list),
+                                           vms2wait=dict((vm['name'], role)
+                                                         for vm, role in vm_list),
                                            vm_ready_hooks=[vm_ready_cb],
                                            inventory_filename=inventory)
     tpool = ThreadPool(processes=parallel_provision)
@@ -91,7 +91,9 @@ def rebuild_vms(vm_dict,
     # runs in the provisioning thread
     @forward_thread_exceptions(provisioned)
     def _rebuild_vm(name_role):
-        vm_name, role = name_role
+        vm, role = name_role
+        vm_name = vm['name']
+        cloud_conf_data = make_cloud_conf_data(cluster_def, vm)
         if redefine:
             redefine_vm(vm_name=vm_name,
                         role=role,
@@ -103,8 +105,9 @@ def rebuild_vms(vm_dict,
         vdisk = '/dev/{vg}/{lv}'.format(vg=storage_conf['os']['vg'],
                                         lv=os_lv_name(vm_name))
         destroy_vm(vm_name)
+        img = vm.get('source_image', {}).get('path', source_image)
         provision([vdisk],
-                  img=source_image,
+                  img=img,
                   config_drives=[config_drive_img],
                   swap_size=vm_conf['swap_size'] * 1024 * 2,
                   swap_label=vm_conf['swap_label'])
@@ -161,14 +164,20 @@ def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
     return img_path
 
 
-def make_cloud_conf_data(cluster_def):
+def make_cloud_conf_data(cluster_def, vm_def={}):
+    def _param(name, default=None):
+        if default is None:
+            return vm_def.get(name, cluster_def[name])
+        else:
+            return vm_def.get(name, cluster_def.get(name, default))
+
     cloud_conf_data = {
         'ssh_authorized_keys': get_authorized_keys(),
-        'distro': cluster_def['distro'],
-        'distro_release': cluster_def['distro_release'],
+        'distro': _param('distro'),
+        'distro_release': _param('distro_release'),
         'swap_size': cluster_def['vm_conf']['swap_size'],
         'swap_label': cluster_def['vm_conf']['swap_label'],
-        'graphics': cluster_def.get('graphics', {}),
+        'graphics': _param('graphics', default={}),
         'whoami': os.environ['USER'],
     }
     if 'ceph_release' in cluster_def:
