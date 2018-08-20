@@ -245,6 +245,30 @@ def copy_config_drive(src, dst):
     run_dd(src, dst, bs='512c', conv='fsync')
 
 
+def _provision_woe(vdisk):
+    vdisk = get_dm_lv_name(vdisk)
+    verify_blockdev(vdisk)
+    fixup_vdisk_ownership(vdisk)
+    deactivate_partitions(vdisk, permissive=True)
+    zap_partition_table(vdisk)
+
+
+def provision_woe(vdisks,
+                  img=None,
+                  config_drives=None,
+                  swap_size=SWAP_MB * 1024 * 2,
+                  swap_label=SWAP_LABEL):
+    for vdisk in vdisks:
+        _provision_woe(vdisk)
+
+
+def get_provision_method(distro):
+    provision_methods = {
+        'woe2008': provision_woe,
+    }
+    return provision_methods.get(distro, provision)
+
+
 def main():
     parser = OptionParser()
     parser.add_option('-i', dest='image', help='source image, must be raw')

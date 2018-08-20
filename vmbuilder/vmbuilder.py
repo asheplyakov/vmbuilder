@@ -18,7 +18,7 @@ from threading import Semaphore
 from .gen_cloud_conf import generate_cc
 from .make_vm import os_lv_name, redefine_vm
 from .miscutils import refresh_sudo_credentials, forward_thread_exceptions
-from .provision_vm import provision
+from .provision_vm import get_provision_method
 from .driveutils import vg_is_ssd
 from .py3compat import subprocess
 from .sshutils import get_authorized_keys
@@ -106,6 +106,8 @@ def rebuild_vms(vm_dict,
         vdisk = '/dev/{vg}/{lv}'.format(vg=vm_def['drives']['os']['vg'],
                                         lv=os_lv_name(vm_name))
         destroy_vm(vm_name)
+
+        provision = get_provision_method(vm_def['distro'])
 
         provision([vdisk],
                   img=vm_def['drives']['install_image'],
