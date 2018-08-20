@@ -11,6 +11,7 @@ import sys
 import uuid
 
 from . import TEMPLATE_DIR
+from .autounattend import Woe2008Autounattend
 from .py3compat import subprocess
 
 
@@ -59,6 +60,13 @@ class NoCloudGenerator(object):
         return self._iso_path
 
 
+def pick_generator(distro):
+    generators = {
+        'woe2008': Woe2008Autounattend,
+    }
+    return generators.get(distro, NoCloudGenerator)
+
+
 def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR):
     data = copy.deepcopy(dat)
     extra_data = {
@@ -66,8 +74,10 @@ def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR):
         'vm_uuid': uuid.uuid4(),
     }
     data.update(extra_data)
-    gen = NoCloudGenerator(vm_name=vm_name, distro=dat['distro'],
-                           template_dir=template_dir)
+
+    generatorClass = pick_generator(dat['distro'])
+    gen = generatorClass(vm_name=vm_name, distro=dat['distro'],
+                         template_dir=template_dir)
     return gen.generate(data)
 
 
