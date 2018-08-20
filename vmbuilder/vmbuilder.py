@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 
+import copy
 import optparse
 import os
 try:
@@ -67,12 +68,11 @@ def rebuild_vms(vm_dict,
 
     source_image = prepare_cloud_img(source_image_data,
                                      cluster_def=cluster_def)
-    cloud_conf_data = make_cloud_conf_data(cluster_def)
 
     vm_start_throttle_sem = Semaphore(parallel)
     provisioned = Queue.Queue()
     vms2wait = set([vm['name'] for vm, _ in vm_list])
-    web_callback_addr = make_cloud_conf_data(cluster_def)['web_callback_addr']
+    web_callback_addr = merge_vm_info(cluster_def)['web_callback_addr']
 
     # runs in the web callback thread
     def vm_ready_cb(**kwargs):
@@ -93,22 +93,23 @@ def rebuild_vms(vm_dict,
     def _rebuild_vm(name_role):
         vm, role = name_role
         vm_name = vm['name']
-        cloud_conf_data = make_cloud_conf_data(cluster_def, vm)
+        vm_def = merge_vm_info(cluster_def, vm)
+        vm_def['drives']['config_image'] = generate_cc(vm_def, vm_name=vm_name)
         if redefine:
             redefine_vm(vm_name=vm_name,
                         role=role,
                         vm_conf=vm_conf,
-                        storage_conf=storage_conf,
-                        graphics_conf=cluster_def.get('graphics', {}),
-                        net_conf=cluster_def['networks'])
-        config_drive_img = generate_cc(cloud_conf_data, vm_name=vm_name)
-        vdisk = '/dev/{vg}/{lv}'.format(vg=storage_conf['os']['vg'],
+                        storage_conf=vm_def['drives'],
+                        graphics_conf=vm_def.get('graphics', {}),
+                        net_conf=cluster_def['networks'],
+                        template=vm_def['vm_template'])
+        vdisk = '/dev/{vg}/{lv}'.format(vg=vm_def['drives']['os']['vg'],
                                         lv=os_lv_name(vm_name))
         destroy_vm(vm_name)
-        img = vm.get('source_image', {}).get('path', source_image)
+
         provision([vdisk],
-                  img=img,
-                  config_drives=[config_drive_img],
+                  img=vm_def['drives']['install_image'],
+                  config_drives=[vm_def['drives']['config_image']],
                   swap_size=vm_conf['swap_size'] * 1024 * 2,
                   swap_label=vm_conf['swap_label'])
         provisioned.put(vm_name)
@@ -164,20 +165,29 @@ def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
     return img_path
 
 
-def make_cloud_conf_data(cluster_def, vm_def={}):
-    def _param(name, default=None):
-        if default is None:
+
+def merge_vm_info(cluster_def, vm_def={}):
+    def _param(name, default=None, mandatory=True):
+        if mandatory:
             return vm_def.get(name, cluster_def[name])
         else:
             return vm_def.get(name, cluster_def.get(name, default))
 
+    drives = copy.deepcopy(cluster_def['storage_conf'])
+    extra_drives = {
+        'install_image': _param('source_image')['path'],
+        'config_image': _param('config_image', mandatory=False),
+    }
+    drives.update(extra_drives)
     cloud_conf_data = {
         'ssh_authorized_keys': get_authorized_keys(),
         'distro': _param('distro'),
         'distro_release': _param('distro_release'),
         'swap_size': cluster_def['vm_conf']['swap_size'],
         'swap_label': cluster_def['vm_conf']['swap_label'],
-        'graphics': _param('graphics', default={}),
+        'graphics': _param('graphics', default={}, mandatory=False),
+        'drives': drives,
+        'vm_template': _param('vm_template', default='vm.xml', mandatory=False),
         'whoami': os.environ['USER'],
     }
     if 'ceph_release' in cluster_def:
