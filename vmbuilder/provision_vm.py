@@ -9,6 +9,7 @@ import sys
 import threading
 from optparse import OptionParser
 
+from .driveutils import zap_partition_table
 from .miscutils import padded
 from .py3compat import subprocess
 
@@ -111,8 +112,7 @@ def partition_vhd(vdisk,
     root_size = disk_size - root_start - swap_size - config_drive_size
     swap_start = root_start + root_size
     config_drive_start = swap_start + swap_size
-    subprocess.check_call(['dd', 'if=/dev/zero', 'of=%s' % vdisk,
-                           'bs=1M', 'count=1', 'conv=fsync'])
+    zap_partition_table(vdisk)
     sfdisk = subprocess.Popen(['sfdisk', '--force', '-u', 'S', vdisk],
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,

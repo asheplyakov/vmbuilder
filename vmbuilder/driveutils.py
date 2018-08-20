@@ -4,6 +4,7 @@ import os
 import stat
 
 from .thinpool import vgs as lvm_vgs, NoSuchVG
+from .py3compat import subprocess
 
 
 def partition_base_device(dev, abspath=False):
@@ -47,6 +48,11 @@ def drive_is_ssd(orig_dev):
 
     with open(rotational, 'r') as f:
         return int(f.read()) == 0
+
+
+def zap_partition_table(vdisk):
+    subprocess.check_call(['dd', 'if=/dev/zero', 'of=%s' % vdisk,
+                           'bs=1M', 'count=1', 'conv=fsync'])
 
 
 def vg_is_ssd(vg_name):
