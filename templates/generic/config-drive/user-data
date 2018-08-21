@@ -12,7 +12,7 @@ users:
 
 chpasswd:
   list: |
-    root:r00tme
+    root:{{ admin_password|default('r00tme') }}
 
 ssh_pwauth: True
 disable_root: False

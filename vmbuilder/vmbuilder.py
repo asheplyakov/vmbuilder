@@ -189,6 +189,7 @@ def merge_vm_info(cluster_def, vm_def={}):
         'drives': drives,
         'vm_template': _param('vm_template', default='vm.xml', mandatory=False),
         'whoami': os.environ['USER'],
+        'admin_password': _param('admin_password'),
     }
     if 'ceph_release' in cluster_def:
         cloud_conf_data['ceph_release'] = cluster_def['ceph_release']

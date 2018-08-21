@@ -2,7 +2,7 @@
 
 chpasswd:
   list: |
-    root:r00tme
+    root:{{ admin_password|default('r00tme') }}
     ubuntu:ubuntu
   expire: False
 ssh_pwauth: True
