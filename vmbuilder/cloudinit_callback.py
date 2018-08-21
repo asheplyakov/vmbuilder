@@ -13,6 +13,8 @@ import random
 import string
 import sys
 import web
+
+from collections import OrderedDict
 from optparse import OptionParser
 from threading import Thread, Event
 
@@ -42,9 +44,8 @@ class InventoryGenerator(object):
     """
     def __init__(self, hosts_with_roles, filename=None):
         self._filename = filename
-        self._inventory = dict((role, [])
-                               for _, role in hosts_with_roles.items())
-        self._inventory['all'] = []
+        self._inventory = OrderedDict((role, []) for role in
+            ['all'] + sorted(set(r for _, r in hosts_with_roles.items())))
         self._hosts_with_roles = dict((host.split('.')[0].lower(), role)
                                       for host, role
                                       in hosts_with_roles.items())
