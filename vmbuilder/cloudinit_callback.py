@@ -45,14 +45,14 @@ class InventoryGenerator(object):
         self._inventory = dict((role, [])
                                for _, role in hosts_with_roles.items())
         self._inventory['all'] = []
-        self._hosts_with_roles = dict((host.split('.')[0], role)
+        self._hosts_with_roles = dict((host.split('.')[0].lower(), role)
                                       for host, role
                                       in hosts_with_roles.items())
 
     def add(self, hostname, ip, **kwargs):
         short_hostname = hostname.split('.')[0]
         entry = {'host': short_hostname, 'ip': ip}
-        role = self._hosts_with_roles.get(short_hostname, 'all')
+        role = self._hosts_with_roles.get(short_hostname.lower(), 'all')
         self._inventory[role].append(entry)
 
     def update(self, hostname, ip, **kwargs):
@@ -135,7 +135,7 @@ class CloudInitWebCallback(object):
 
     def _async_worker(self):
         seen_vms = set()
-        vms2wait = set(self.vms2wait.keys())
+        vms2wait = set(name.lower() for name in self.vms2wait.keys())
         while seen_vms != vms2wait:
             vm_dat = self._ssh_keys_queue.get()
             if self._stop_event.is_set():
@@ -146,7 +146,7 @@ class CloudInitWebCallback(object):
                               if k not in ('hostname', 'ip'))
             for hook in self._async_hooks:
                 hook(vm_dat['hostname'], vm_dat['ip'], **extra_args)
-            seen_vms.add(vm_dat['hostname'])
+            seen_vms.add(vm_dat['hostname'].lower())
         self._app.stop()
 
     def _vm_called_back(self, **kwargs):
