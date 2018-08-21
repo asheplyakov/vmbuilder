@@ -53,21 +53,32 @@ class InventoryGenerator(object):
 
     def add(self, hostname, ip, **kwargs):
         short_hostname = hostname.split('.')[0]
-        entry = {'host': short_hostname, 'ip': ip}
+        entry = {
+            'host': short_hostname,
+            'ip': ip,
+            'os': kwargs.get('os', 'unix'),
+        }
         role = self._hosts_with_roles.get(short_hostname.lower(), 'all')
         self._inventory[role].append(entry)
+
+    def _make_host_entry(self, host):
+        if host['os'] == 'windows':
+            fmt = '{hostname} ansible_host={ip} ansible_port=5985 '\
+                  'ansible_connection=winrm ansible_winrm_scheme=http '\
+                  'ansible_winrm_transport=basic ansible_user=administrator'
+        else:
+            fmt = '{hostname} ansible_host={ip} ansible_user=root'
+        return fmt.format(hostname=host['host'], ip=host['ip'])
 
     def update(self, hostname, ip, **kwargs):
         self.add(hostname, ip, **kwargs)
         self.write()
 
     def _write(self, thefile):
-        entry_format = '{hostname} ansible_host={ip} ansible_user=root'
         for role, hosts in self._inventory.items():
             thefile.write('[%s]\n' % role)
             for host in hosts:
-                entry = entry_format.format(hostname=host['host'],
-                                            ip=host['ip'])
+                entry = self._make_host_entry(host)
                 thefile.write(entry + '\n')
         thefile.flush()
 
