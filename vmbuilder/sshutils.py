@@ -90,12 +90,13 @@ class SshConfigGenerator(object):
                                                 user=self._user))
         thefile.flush()
 
-    def add(self, hostname, ip, ssh_key):
+    def add(self, hostname, ip, **kwargs):
         self._hosts[hostname] = ip
+        return True
 
-    def update(self, hostname, ip, ssh_key):
-        self.add(hostname, ip, ssh_key)
-        self.write()
+    def update(self, hostname, ip, **kwargs):
+        if self.add(hostname, ip, **kwargs):
+            self.write()
 
     def write(self):
         mkdir_p(os.path.dirname(self._path))

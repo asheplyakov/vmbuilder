@@ -49,14 +49,14 @@ class InventoryGenerator(object):
                                       for host, role
                                       in hosts_with_roles.items())
 
-    def add(self, hostname, ip, ssh_key):
+    def add(self, hostname, ip, **kwargs):
         short_hostname = hostname.split('.')[0]
         entry = {'host': short_hostname, 'ip': ip}
         role = self._hosts_with_roles.get(short_hostname, 'all')
         self._inventory[role].append(entry)
 
-    def update(self, hostname, ip, ssh_key):
-        self.add(hostname, ip, ssh_key)
+    def update(self, hostname, ip, **kwargs):
+        self.add(hostname, ip, **kwargs)
         self.write()
 
     def _write(self, thefile):
@@ -125,10 +125,12 @@ class CloudInitWebCallback(object):
         # invoked by web app on POST
         self._ssh_keys_queue.put(kwargs)
 
-    def _update_ssh_known_hosts(self, hostname, ip, ssh_key):
+    def _update_ssh_known_hosts(self, hostname, ip, **kwargs):
+        ssh_key = kwargs['ssh_key']
         update_known_hosts(ssh_key=ssh_key, ips=[(ip, hostname)])
 
-    def _report_vm_ready(self, hostname, ip, ssh_key):
+    def _report_vm_ready(self, hostname, ip, **kwargs):
+        ssh_key = kwargs['ssh_key']
         print("vm {0} ready, ssh_key: {1}".format(hostname, ssh_key))
 
     def _async_worker(self):
@@ -140,8 +142,10 @@ class CloudInitWebCallback(object):
                 break
             if vm_dat is None:
                 continue
+            extra_args = dict((k, v) for k, v in vm_dat.items()
+                              if k not in ('hostname', 'ip'))
             for hook in self._async_hooks:
-                hook(vm_dat['hostname'], vm_dat['ip'], vm_dat['ssh_key'])
+                hook(vm_dat['hostname'], vm_dat['ip'], **extra_args)
             seen_vms.add(vm_dat['hostname'])
         self._app.stop()
 
