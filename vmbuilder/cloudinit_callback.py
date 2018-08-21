@@ -179,7 +179,7 @@ class CloudInitWebCallback(object):
 
 
 def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None):
-    vms = {'all': list(vms2wait)}
+    vms = dict((vm, 'all') for vm in vms2wait)
     server = CloudInitWebCallback(httpd_args, vms2wait=vms,
                                   vm_ready_hooks=[vm_ready_hook]
                                   if vm_ready_hook else None)
