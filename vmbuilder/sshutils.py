@@ -91,6 +91,8 @@ class SshConfigGenerator(object):
         thefile.flush()
 
     def add(self, hostname, ip, **kwargs):
+        if kwargs.get('os', 'unix') == 'windows':
+            return False
         self._hosts[hostname] = ip
         return True
 

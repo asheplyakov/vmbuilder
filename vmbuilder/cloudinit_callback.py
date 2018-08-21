@@ -135,6 +135,8 @@ class CloudInitWebCallback(object):
         self._ssh_keys_queue.put(kwargs)
 
     def _update_ssh_known_hosts(self, hostname, ip, **kwargs):
+        if kwargs.get('os', 'unix') == 'windows':
+            return
         ssh_key = kwargs['ssh_key']
         update_known_hosts(ssh_key=ssh_key, ips=[(ip, hostname)])
 
