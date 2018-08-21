@@ -34,6 +34,7 @@ class VMRegister(object):
             'hostname': web.input().hostname,
             'ip': web.ctx.ip,
             'ssh_key': web.input().pub_key_rsa.strip(),
+            'user_agent': web.ctx.env['HTTP_USER_AGENT'],
         }
         cb = web.ctx.globals.callback
         cb(**kwargs)
@@ -78,9 +79,16 @@ class InventoryGenerator(object):
                 self._write(f)
 
 
+
+def guess_os(user_agent):
+    if user_agent is not None and 'Windows' in user_agent:
+        return 'windows'
+    else:
+        return 'unix'
+
+
 class CloudInitWebCallback(object):
     """Accept cloud-init "phone home" POST requests
-
     Does two useful things
     - waits for specified VMs to be configured by cloud-init
     - manages VMs' ssh public keys in the local ~/.ssh/known_hosts file
@@ -145,6 +153,7 @@ class CloudInitWebCallback(object):
                 continue
             extra_args = dict((k, v) for k, v in vm_dat.items()
                               if k not in ('hostname', 'ip'))
+            extra_args.update(os=guess_os(vm_dat.get('user_agent')))
             for hook in self._async_hooks:
                 hook(vm_dat['hostname'], vm_dat['ip'], **extra_args)
             seen_vms.add(vm_dat['hostname'].lower())
