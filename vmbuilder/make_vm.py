@@ -94,24 +94,25 @@ def make_vm_xml(vm_name=None,
 
 def create_vm_lvs(vm_name=None,
                   role=None,
-                  vm_params=None,
-                  storage_conf=None,
+                  drives=None,
                   template_dir=TEMPLATE_DIR):
 
-    def make_lvs(group, **kwargs):
-        # { 'os': {'vg': 'ssd-vg', 'thin_pool': 'vmpool'}, }
-        drives_conf = storage_conf[group]
+    def make_lvs(group, data, **kwargs):
+        # data = {'vg': 'ssd-vg', 'thin_pool': 'vmpool'}
         lv_name = globals()['%s_lv_name' % group](vm_name, **kwargs)
-        create_thin_lv(vg=drives_conf['vg'],
-                       thin_pool=drives_conf['thin_pool'],
-                       size=vm_params['drives'][group]['disk_size'],
+        create_thin_lv(vg=drives[group]['vg'],
+                       thin_pool=drives[group]['thin_pool'],
+                       size=drives[group]['disk_size'],
                        name=lv_name)
 
-    make_lvs('os')
-    if role == 'osds':
-        make_lvs('journal')
-        for osd_idx in range(0, vm_params['osds_per_node']):
-            make_lvs('data', osd_idx=osd_idx)
+    def make_nop(group, data, **kwargs):
+        print('skipping group %s for vm %s' % (group, vm_name))
+
+    def get_maker(data):
+        return make_lvs if 'vg' in data else make_nop
+
+    for group, data in drives.items():
+        get_maker(data)(group, data)
 
 
 def redefine_vm(vm_name=None,
@@ -142,8 +143,7 @@ def redefine_vm(vm_name=None,
         define_vm(vm_xml=new_vm_xml, conn=conn)
         create_vm_lvs(vm_name=vm_name,
                       role=role,
-                      vm_params=vm_conf,
-                      storage_conf=storage_conf)
+                      drives=storage_conf)
 
 
 def main():
