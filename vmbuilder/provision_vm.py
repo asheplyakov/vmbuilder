@@ -10,7 +10,7 @@ import threading
 from optparse import OptionParser
 
 from .driveutils import zap_partition_table
-from .miscutils import padded
+from .miscutils import padded, with_retries
 from .py3compat import subprocess
 
 
@@ -168,6 +168,7 @@ def activate_partitions(vdisk):
     fixup_vdisk_ownership(vdisk)
 
 
+@with_retries(3)
 def deactivate_partitions(vdisk, permissive=False):
     vdisk = get_dm_lv_name(vdisk)
     try:

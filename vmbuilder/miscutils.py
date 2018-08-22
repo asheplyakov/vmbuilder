@@ -6,6 +6,7 @@ import errno
 import os
 import random
 import string
+import time
 import traceback
 import sys
 
@@ -26,6 +27,26 @@ def forward_thread_exceptions(queue):
                 extype, exval, bt = sys.exc_info()
                 data = (extype, exval, bt)
                 queue.put(data)
+
+        return wrapper
+
+    return actual_decorator
+
+
+def with_retries(N):
+    """ Catch all exceptions and retry N times"""
+
+    def actual_decorator(f):
+
+        def wrapper(*args, **kwargs):
+            timeout = 1
+            for _ in range(0, N - 1):
+                try:
+                    return f(*args, **kwargs)
+                except:
+                    time.sleep(timeout)
+                    timeout *= 2
+            return f(*args, **kwargs)
 
         return wrapper
 
