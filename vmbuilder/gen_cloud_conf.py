@@ -67,16 +67,14 @@ def pick_generator(distro):
     return generators.get(distro, NoCloudGenerator)
 
 
-def generate_cc(dat, vm_name=None, template_dir=TEMPLATE_DIR):
-    data = copy.deepcopy(dat)
-    extra_data = {
-        'vm_name': vm_name,
-        'vm_uuid': uuid.uuid4(),
-    }
-    data.update(extra_data)
+def generate_cc(vm_def, template_dir=TEMPLATE_DIR):
+    vm_name = vm_def['vm_name']
+    data = copy.deepcopy(vm_def)
+    if 'vm_uuid' not in data:
+        data['vm_uuid'] = uuid.uuid4()
 
-    generatorClass = pick_generator(dat['distro'])
-    gen = generatorClass(vm_name=vm_name, distro=dat['distro'],
+    generatorClass = pick_generator(vm_def['distro'])
+    gen = generatorClass(vm_name=vm_name, distro=vm_def['distro'],
                          template_dir=template_dir)
     return gen.generate(data)
 
@@ -108,8 +106,9 @@ def main():
         'web_callback_url': options.web_callback_url,
     }
     for vm_name in args:
-        generate_cc(data, vm_name=vm_name, distro=options.distro,
-                    template_dir=options.template_dir)
+        vm_def = copy.deepcopy(data)
+        vm_def['vm_name'] = vm_name
+        generate_cc(vm_def, template_dir=options.template_dir)
 
 
 if __name__ == '__main__':

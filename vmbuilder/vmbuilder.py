@@ -9,6 +9,7 @@ try:
     import Queue
 except ImportError:
     import queue as Queue
+import uuid
 import yaml
 
 from collections import defaultdict
@@ -48,7 +49,6 @@ def rebuild_vms(vm_dict,
             destroy_vm(vm['name'], undefine=True, purge=True)
         return
 
-    vm_conf = cluster_def['vm_conf']
     storage_conf = cluster_def['drives']
     source_image_data = cluster_def['source_image']
     distro = cluster_def.get('distro', 'ubuntu')
@@ -72,7 +72,6 @@ def rebuild_vms(vm_dict,
     vm_start_throttle_sem = Semaphore(parallel)
     provisioned = Queue.Queue()
     vms2wait = set([vm['name'] for vm, _ in vm_list])
-    web_callback_addr = merge_vm_info(cluster_def)['web_callback_addr']
 
     # runs in the web callback thread
     def vm_ready_cb(**kwargs):
@@ -81,7 +80,7 @@ def rebuild_vms(vm_dict,
         vm_start_throttle_sem.release()
 
     inventory = 'hosts_%s.txt' % cluster_def.get('cluster_name', 'unknown')
-    callback_worker = CloudInitWebCallback([web_callback_addr],
+    callback_worker = CloudInitWebCallback([web_callback_addr(cluster_def)],
                                            vms2wait=dict((vm['name'], role)
                                                          for vm, role in vm_list),
                                            vm_ready_hooks=[vm_ready_cb],
@@ -90,17 +89,14 @@ def rebuild_vms(vm_dict,
 
     # runs in the provisioning thread
     @forward_thread_exceptions(provisioned)
-    def _rebuild_vm(name_role):
-        vm, role = name_role
-        vm_name = vm['name']
-        vm_def = merge_vm_info(cluster_def, vm)
-        vm_def['drives']['config_image'] = generate_cc(vm_def, vm_name=vm_name)
+    def _rebuild_vm(vm_and_role):
+        vm_def = copy.deepcopy(vm_and_role[0])
+        vm_def['role'] = vm_and_role[1]
+        vm_def = merge_vm_info(cluster_def, vm_def)
+        vm_name = vm_def['vm_name']
+        vm_def['drives']['config_image'] = generate_cc(vm_def)
         if redefine:
-            redefine_vm(vm_name=vm_name,
-                        role=role,
-                        vm_conf=vm_conf,
-                        storage_conf=vm_def['drives'],
-                        graphics_conf=vm_def.get('graphics', {}),
+            redefine_vm(vm_def,
                         net_conf=cluster_def['networks'],
                         template=vm_def['vm_template'])
         vdisk = '/dev/{vg}/{lv}'.format(vg=vm_def['drives']['os']['vg'],
@@ -112,8 +108,8 @@ def rebuild_vms(vm_dict,
         provision([vdisk],
                   img=vm_def['drives']['install_image'],
                   config_drives=[vm_def['drives']['config_image']],
-                  swap_size=vm_conf['swap_size'] * 1024 * 2,
-                  swap_label=vm_conf['swap_label'])
+                  swap_size=vm_def['swap_size'] * 1024 * 2,
+                  swap_label=vm_def['swap_label'])
         provisioned.put(vm_name)
 
     refresh_sudo_credentials()
@@ -167,51 +163,84 @@ def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
     return img_path
 
 
+def merge_vm_info(cluster_def, vm_def):
 
-def merge_vm_info(cluster_def, vm_def={}):
-    def _param(name, default=None, mandatory=True):
-        if mandatory:
-            return vm_def.get(name, cluster_def[name])
-        else:
-            return vm_def.get(name, cluster_def.get(name, default))
+    new_vm_def = copy.deepcopy(vm_def)
+    new_vm_def['vm_name'] = new_vm_def['name']
+
+    builtin_machine = {
+        'cpu_count': 1,
+        'base_ram': 1024,
+        'max_ram': 2048,
+        'swap_size': 2048,
+        'swap_label': 'MOREVM',
+        'vm_template': 'vm.xml',
+        'graphics': {},
+        'vm_uuid': uuid.uuid4(),
+    }
+
+    def _base_param(var):
+        val = vm_def.get(var)
+        if val is None:
+            val = cluster_def['machine'].get(var)
+        if val is None:
+            val = builtin_machine[var]
+        return val
+
+    for var in builtin_machine.keys():
+        new_vm_def[var] = _base_param(var)
+
+    required_params = (
+        'distro',
+        'distro_release',
+        'admin_password',
+    )
+
+    for var in required_params:
+        new_vm_def[var] = vm_def.get(var, cluster_def[var])
+
+    def _param(name):
+        return vm_def.get(name, cluster_def[name])
+
+    def copy_optional_param(dst, var):
+        if var in vm_def:
+            dst[var] = vm_def[var]
 
     drives = copy.deepcopy(_param('drives'))
     extra_drives = {
         'install_image': os.path.expanduser(_param('source_image')['path']),
-        'config_image': _param('config_image', mandatory=False),
     }
+    # copy_optional_param(extra_drives, 'config_image')
     drives.update(extra_drives)
-    cloud_conf_data = {
+    new_vm_def.update(drives=drives)
+
+    auth_data = {
         'ssh_authorized_keys': get_authorized_keys(),
-        'distro': _param('distro'),
-        'distro_release': _param('distro_release'),
-        'swap_size': cluster_def['vm_conf']['swap_size'],
-        'swap_label': cluster_def['vm_conf']['swap_label'],
-        'graphics': _param('graphics', default={}, mandatory=False),
-        'drives': drives,
-        'vm_template': _param('vm_template', default='vm.xml', mandatory=False),
         'whoami': os.environ['USER'],
-        'admin_password': _param('admin_password'),
     }
-    if 'ceph_release' in cluster_def:
-        cloud_conf_data['ceph_release'] = cluster_def['ceph_release']
+    new_vm_def.update(auth_data)
 
     net_conf = cluster_def['networks']
     bridge_ip = libvirt_net_host_ip(net_conf['default']['source_net'])
-    cloud_conf_data.update(hypervisor_ip=bridge_ip)
+    new_vm_def.update(hypervisor_ip=bridge_ip)
 
     http_proxy_tpl = cluster_def.get('net_conf', {}).get('http_proxy')
     http_proxy = http_proxy_tpl.format(hypervisor_ip=bridge_ip) \
        if http_proxy_tpl else None
-    cloud_conf_data.update(http_proxy=http_proxy)
+    new_vm_def.update(http_proxy=http_proxy)
 
     web_callback_url = cluster_def.get('net_conf', {}).\
         get('web_callback_url', WEB_CALLBACK_URL)
     web_callback_url = web_callback_url.format(hypervisor_ip=bridge_ip)
     web_callback_addr = web_callback_url.split('http://', 1)[1]
-    cloud_conf_data.update(web_callback_url=web_callback_url,
-                           web_callback_addr=web_callback_addr)
-    return cloud_conf_data
+    new_vm_def.update(web_callback_url=web_callback_url,
+                      web_callback_addr=web_callback_addr)
+    return new_vm_def
+
+
+def web_callback_addr(cluster_def):
+    stub = {'name': 'dummy', 'role': 'dummy'}
+    return merge_vm_info(cluster_def, stub)['web_callback_addr']
 
 
 def main():

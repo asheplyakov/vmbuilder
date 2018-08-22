@@ -5,9 +5,9 @@
     <qemu:arg value='qxl-vga.revision=4'/>
   </qemu:commandline>
   <name>{{ vm_name }}</name>
-  <memory unit='MiB'>{{ ram_mb }}</memory>
-  <currentMemory unit='MiB'>{{ ram_mb }}</currentMemory>
-  <vcpu placement='static'>{{ cpu_count }}</vcpu>
+  <memory unit='MiB'>{{ base_ram }}</memory>
+  <currentMemory unit='MiB'>{{ base_ram|default(1024)|int }}</currentMemory>
+  <vcpu placement='static'>{{ cpu_count|default(1)|int }}</vcpu>
   <resource>
     <partition>/machine</partition>
   </resource>

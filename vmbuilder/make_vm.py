@@ -18,22 +18,6 @@ from . import TEMPLATE_DIR
 VM_TEMPLATE = 'vm.xml'
 
 
-def calc_ram_size(role, base_ram=2048, osds_per_node=2):
-    if role == 'osds':
-        return base_ram * osds_per_node
-    elif role == 'clients':
-        return base_ram // 2
-    else:
-        return base_ram
-
-
-def vm_cpu_count(role, osds_per_node=2, base_cpu_count=2):
-    if role == 'osds':
-        return base_cpu_count * osds_per_node
-    else:
-        return base_cpu_count
-
-
 def data_lv_name(vm_name, osd_idx=None):
     return '{vm_name}_{osd_idx}-data'.format(vm_name=vm_name,
                                              osd_idx=osd_idx)
@@ -47,30 +31,15 @@ def os_lv_name(vm_name, osd_idx=None):
     return '{vm_name}-os'.format(vm_name=vm_name)
 
 
-def make_vm_xml(vm_name=None,
-                role=None,
-                vm_conf=None,
-                storage_conf=None,
+def make_vm_xml(vm_def,
                 net_conf=None,
-                graphics_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 conn=LIBVIRT_CONNECTION):
-    if vm_conf is None:
-        raise ValueError("make_vm_xml: vm_conf=None")
 
+    vm_name = vm_def['vm_name']
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
-    vm_params = copy.deepcopy(vm_conf)
-    vm_params.update(vm_name=vm_name, role=role)
-    osds_per_node = vm_params.get('osds_per_node', 1)
-    vm_params.update(ram_mb=calc_ram_size(role,
-                                          vm_conf['base_ram'],
-                                          osds_per_node),
-                     cpu_count=vm_cpu_count(role, osds_per_node),
-                     journal_lv_name=journal_lv_name(vm_name),
-                     drives=storage_conf)
-    # graphics - spice or vnc?
-    vm_params.update(graphics=(graphics_conf or {}))
+    vm_params = copy.deepcopy(vm_def)
     # keep MAC addresses stable across VM re-definitions
     old_ifaces = get_vm_macs(vm_name, conn=conn)
     ifaces = dict((name, {'source_net': iface['source_net'],
@@ -115,22 +84,16 @@ def create_vm_lvs(vm_name=None,
         get_maker(data)(group, data)
 
 
-def redefine_vm(vm_name=None,
-                role=None,
-                vm_conf=None,
-                storage_conf=None,
+def redefine_vm(vm_def,
                 net_conf=None,
-                graphics_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 dry_run=False,
                 conn=LIBVIRT_CONNECTION):
-    new_vm_xml = make_vm_xml(vm_name=vm_name,
-                             role=role,
-                             vm_conf=vm_conf,
-                             storage_conf=storage_conf,
+
+    vm_name = vm_def['vm_name']
+    new_vm_xml = make_vm_xml(vm_def,
                              net_conf=net_conf,
-                             graphics_conf=graphics_conf,
                              template=template,
                              template_dir=template_dir,
                              conn=conn)
@@ -142,8 +105,8 @@ def redefine_vm(vm_name=None,
     else:
         define_vm(vm_xml=new_vm_xml, conn=conn)
         create_vm_lvs(vm_name=vm_name,
-                      role=role,
-                      drives=storage_conf)
+                      role=vm_def['role'],
+                      drives=vm_def['drives'])
 
 
 def main():

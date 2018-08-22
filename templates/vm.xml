@@ -9,9 +9,9 @@
 <domain type='kvm'>
 {% endif %}
   <name>{{ vm_name }}</name>
-  <memory unit='MiB'>{{ ram_mb }}</memory>
-  <currentMemory unit='MiB'>{{ ram_mb }}</currentMemory>
-  <vcpu placement='static'>{{ cpu_count }}</vcpu>
+  <memory unit='MiB'>{{ base_ram|default(512) }}</memory>
+  <currentMemory unit='MiB'>{{ max_ram|default((base_ram|default(1024)|int)*2) }}</currentMemory>
+  <vcpu placement='static'>{{ cpu_count|default(1)|int }}</vcpu>
   <resource>
     <partition>/machine</partition>
   </resource>
