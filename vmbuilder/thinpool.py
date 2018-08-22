@@ -47,13 +47,12 @@ def query_thin_lv(vg=None, lv=None, thin_pool=None):
            '--separator', separator, '-o', ','.join(fields),
            '{0}/{1}'.format(vg, lv)]
     try:
-        out, err = subprocess.check_output(cmd, stderr=subprocess.PIPE)
+        raw_params = subprocess.check_output(cmd).strip().split(separator)
     except subprocess.CalledProcessError as e:
         if e.returncode == LVM_NO_SUCH_LV:
             raise NoSuchLV('{0}/{1}'.format(vg, lv))
         else:
             raise
-    raw_params = out.strip().split(separator)
     params = dict((var, raw_params[fields.index(var)]) for var in fields)
     for numeric_var in ('lv_size', 'data_percent'):
         params[numeric_var] = float(params[numeric_var])
