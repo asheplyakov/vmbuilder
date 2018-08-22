@@ -143,7 +143,7 @@ def rebuild_vms(vm_dict,
 
 def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
     if 'path' in source_image_data:
-        img_path = source_image_data['path']
+        img_path = os.path.expanduser(source_image_data['path'])
     elif 'url' in source_image_data:
         img_url_tpl = source_image_data['url']
         distro_release = cluster_def['distro_release']
@@ -177,7 +177,7 @@ def merge_vm_info(cluster_def, vm_def={}):
 
     drives = copy.deepcopy(cluster_def['storage_conf'])
     extra_drives = {
-        'install_image': _param('source_image')['path'],
+        'install_image': os.path.expanduser(_param('source_image')['path']),
         'config_image': _param('config_image', mandatory=False),
     }
     drives.update(extra_drives)
