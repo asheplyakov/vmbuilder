@@ -168,7 +168,9 @@ def get_vm_macs(vm_name, conn=LIBVIRT_CONNECTION):
 
 def vm_exists(vm_name, conn=LIBVIRT_CONNECTION):
     try:
-        subprocess.check_output(['virsh', '-c', conn, 'domstate', vm_name])
+        cmd = ['virsh', '-c', conn, 'domstate', vm_name]
+        with open(os.devnull, 'w') as null:
+            subprocess.check_call(cmd, stdout=null, stderr=null)
         return True
     except subprocess.CalledProcessError:
         return False
@@ -202,7 +204,8 @@ def wait4state(name, state, conn=LIBVIRT_CONNECTION):
 def destroy_vm(name, undefine=False, purge=False, conn=LIBVIRT_CONNECTION):
     try:
         cmd = ['virsh', '-c', conn, 'domstate', name]
-        state = subprocess.check_output(cmd).strip()
+        with open(os.devnull, 'w') as null:
+            state = subprocess.check_output(cmd, stderr=null).strip()
     except subprocess.CalledProcessError:
         # OK, no such VM
         return
