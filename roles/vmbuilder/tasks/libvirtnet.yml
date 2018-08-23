@@ -1,0 +1,58 @@
+---
+
+# adjust libvirt network definition if the host uses 192.168.122.0/24 network
+#
+
+- name: find out running libvirt networks
+  command: virsh -q net-list --name
+  register: active_libvirt_networks
+  become: true
+
+- name: shut down default libvirt network
+  command: virsh net-destroy default
+  when: '"default" in active_libvirt_networks.stdout_lines'
+  become: true
+
+- name: get libvirt default network definition
+  command: virsh net-dumpxml default
+  register: default_net_xml
+  become: true
+
+- name: adjust default network IPv4 address
+  xml:
+    xpath: //network/ip
+    attribute: address
+    value: "{{ libvirt_default_net.address }}"
+    xmlstring: "{{ default_net_xml.stdout }}"
+  register: default_net_xml_s1
+  delegate_to: localhost
+
+- name: adjust default network DHCP range, step 1
+  xml:
+    xpath: //network/ip/dhcp/range
+    attribute: start
+    value: "{{ libvirt_default_net.dhcp_start }}"
+    xmlstring: "{{ default_net_xml_s1.xmlstring }}"
+  register: default_net_xml_s2
+  delegate_to: localhost
+
+- name: adjust default network DHCP range, step 2
+  xml:
+    xpath: //network/ip/dhcp/range
+    attribute: end
+    value: "{{ libvirt_default_net.dhcp_end }}"
+    xmlstring: "{{ default_net_xml_s2.xmlstring }}"
+  register: default_net_xml_final
+  delegate_to: localhost
+
+- name: adjust libvirt default network
+  command: >
+    virsh net-define /dev/stdin
+  args:
+    stdin: "{{ default_net_xml_final.xmlstring }}"
+  become: true
+
+- name: start default libvirt network
+  command: virsh net-start default
+  when: "'default' in active_libvirt_networks.stdout_lines"
+  become: true

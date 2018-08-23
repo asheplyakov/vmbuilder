@@ -1,0 +1,15 @@
+---
+
+- hosts:
+    - servers
+  roles:
+    - vmbuilder
+  vars:
+    libvirt_default_net:
+      address: 192.168.168.1
+      dhcp_start: 192.168.168.8
+      dhcp_end: 192.168.168.253
+    lvm_auto_setup: true
+    scratch_drive: /dev/vdb
+    vm_vg: vmvg
+    vm_thin_pool: vmpool

@@ -1,0 +1,98 @@
+
+- set_fact:
+    required_packages:
+    - libvirt
+    - qemu-system-x86
+    - lvm2
+    - thin-provisioning-tools
+    - kpartx
+    - sfdisk
+    - qemu-img
+    - genisoimage
+    - mtools
+    - parted
+    - python-module-jinja2
+    - python-module-webpy
+    - python-module-winrm
+    - bind-utils
+    - sudo
+    - virt-viewer
+    - wget
+  when: ansible_os_family in ['ALT', 'Altlinux']
+
+- name: install required packages
+  package: name={{ item }} state=present
+  with_items: "{{ required_packages }}"
+  when: ansible_os_family not in ['ALT', 'Altlinux']
+  become: true
+
+- name: install required packages on ALTLinux
+  apt_rpm: pkg={{ item }} state=present
+  with_items: "{{ required_packages }}"
+  when: ansible_os_family in ['ALT', 'Altlinux']
+  become: true
+
+- set_fact:
+    libvirt_user_conf: "{{ lookup('env', 'HOME') }}/.config/libvirt/libvirt.conf"
+
+- name: create user libvirt config directory
+  file:
+    path: "{{ libvirt_user_conf|dirname }}"
+    state: directory
+    mode: 0755
+
+- name: set default libvirt connection URI
+  lineinfile:
+    path: "{{ libvirt_user_conf }}"
+    line: 'uri_default = "qemu:///system"'
+    create: true
+
+- name: add root to sudoers
+  copy:
+    dest: /etc/sudoers.d/root
+    owner: root
+    group: root
+    mode: 0400
+    content: 'root ALL=(ALL) ALL'
+  become: true
+
+- include: ./lvm.yml
+  when:
+    - lvm_auto_setup|default(false)|bool
+    - scratch_drive is defined
+  become: true
+
+- name: start libvirt service
+  service:
+    name: libvirtd
+    state: started
+  become: true
+
+- name: find out running libvirt networks
+  command: >
+    virsh -q net-list --name
+  register: active_libvirt_networks
+  become: true
+
+- include: libvirtnet.yml
+  when: libvirt_default_net is defined
+
+- name: start default libvirt network
+  command: >
+    virsh net-start default
+  when:
+    not 'default' in active_libvirt_networks.stdout_lines
+  become: true
+
+- name: enumerate autostarted libvirt networks
+  command: >
+    virsh -q net-list --name --autostart
+  register: autostart_libvirt_networks
+  become: true
+
+- name: configure autostart for default libvirt network
+  command: >
+    virsh net-autostart default
+  when:
+    not 'default' in autostart_libvirt_networks.stdout_lines
+  become: true

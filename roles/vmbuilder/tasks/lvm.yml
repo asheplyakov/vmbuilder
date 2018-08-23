@@ -1,0 +1,37 @@
+---
+
+- include: wipe_drive.yml
+  vars:
+    scratch_disk: "{{ scratch_drive }}"
+  become: true
+
+- name: make BIOS/DOS partition table on {{ scratch_drive }}
+  command: parted --script {{ scratch_drive }} mklabel msdos
+
+- name: make a single whole drive partition on {{ scratch_drive }}
+  command: >
+    parted -a optimal --script {{ scratch_drive }} mkpart primary 0% 100%
+
+- name: force the kernel to re-read partition table of the scratch drive
+  command: >
+    blockdev --rereadpt {{ scratch_drive }}
+
+- name: wait for partition device node
+  wait_for:
+    path: "{{ scratch_drive }}1"
+    state: present
+    delay: 1
+    sleep: 5
+    timeout: 60
+
+- name: create physical volume on {{ scratch_drive }}1
+  command: >
+    pvcreate {{ scratch_drive }}1
+
+- name: create volume group on {{ scratch_drive }}
+  command: >
+    vgcreate {{ vm_vg }} {{ scratch_drive }}1
+
+- name: create thin pool in volume group
+  command: >
+    lvcreate -l90%FREE -T {{ vm_vg }}/{{ vm_thin_pool }}

@@ -1,0 +1,69 @@
+---
+
+- name: query existing VGs
+  command: >
+    vgs -o vg_name,pv_name --reportformat=json
+  register: vgs_out
+
+- set_fact:
+    vgs: "{{ (vgs_out.stdout|from_json)['report'][0].vg }}"
+
+- name: deactivate VGs residing on the drive
+  command: vgchange -a n {{ item.vg_name }}
+  when: "{{ item.pv_name.startswith(scratch_disk) }}"
+  with_items: "{{ vgs }}"
+
+- name: remove VGs residing on the drive
+  command: vgremove -f {{ item.vg_name }}
+  when: "{{ item.pv_name.startswith(scratch_disk) }}"
+  with_items: "{{ vgs }}"
+
+- name: remove PVs residing on the drive, step 1
+  command: pvremove --yes "{{ item.pv_name }}"
+  when: "{{ item.pv_name.startswith(scratch_disk) }}"
+  with_items: "{{ vgs }}"
+
+- name: query existing PVs
+  command: >
+    pvs -o pv_name,vg_name --reportformat=json
+  register: pvs_out
+
+- set_fact:
+    pvs: "{{ (pvs_out.stdout|from_json)['report'][0].pv }}"
+
+- name: remove PVs residing on the drive, step 2
+  command: pvremove --yes "{{ item.pv_name }}"
+  when:
+    - "item.pv_name.startswith(scratch_disk)"
+  with_items: "{{ pvs }}"
+
+- name: check if any PVs backed by the disk left
+  command: >
+    pvs -o pv_name,vg_name --reportformat=json
+  register: pvs_left_out
+
+- set_fact:
+    pvs_left: "{{ (pvs_left_out.stdout|from_json)['report'][0].pv }}"
+
+- name: fail if any PVs backed by the disk left
+  fail: msg="{{ item.vg_name }} PV still exists"
+  when: "{{ item.pv_name.startswith(scratch_disk) }}"
+  with_items: "{{ pvs_left }}"
+
+- name: check if the disk is still in use
+  command: >
+    blockdev --rereadpt {{ scratch_disk }}
+  register: blockdev_status
+  failed_when: false
+
+- name: fail if the disk is still in use
+  fail: msg="{{ scratch_disk }} is still in use"
+  when: blockdev_status.rc != 0
+
+- name: wipe out the disk partition table
+  command: >
+    wipefs --all {{ scratch_disk }}
+
+- name: force kernel to re-read disk partition table
+  command: >
+    blockdev --rereadpt {{ scratch_disk }}
