@@ -10,6 +10,10 @@ import threading
 from optparse import OptionParser
 
 from .driveutils import zap_partition_table
+from .e2fs import (
+    rm as e2fs_rm,
+    make_empty_file as e2fs_touch,
+)
 from .miscutils import padded, with_retries
 from .py3compat import subprocess
 
@@ -17,6 +21,15 @@ from .py3compat import subprocess
 SWAP_MB = 4096
 SWAP_LABEL = 'MOREVM'
 CONFIG_DRIVE_MB = 4
+
+CLEANUP_FILES = (
+    '/etc/machine-id',
+    '/var/lib/dbus/machine-id',
+)
+TOUCH_FILES = (
+    '/etc/machine-id',
+)
+
 
 def _fixup_path():
     if '/sbin' not in os.environ['PATH'].split(':'):
@@ -33,7 +46,9 @@ def _provision(vdisk, img=None,
                swap_size=None,
                swap_label=None,
                orig_size=None,
-               first_partition_offset=None):
+               first_partition_offset=None,
+               cleanup_files=CLEANUP_FILES,
+               touch_files=TOUCH_FILES):
     # skip verification of the source image
     vdisk = get_dm_lv_name(vdisk)
     verify_blockdev(vdisk)
@@ -49,6 +64,7 @@ def _provision(vdisk, img=None,
     activate_partitions(vdisk)
     rootdev = '{0}1'.format(vdisk)
     clone_rootfs(rootdev, img=img, offset=first_partition_offset)
+    anonymize(rootdev, cleanup_files, touch_files)
     if config_drive_img:
         config_drive_dev = '{0}3'.format(vdisk)
         copy_config_drive(config_drive_img, config_drive_dev)
@@ -62,7 +78,9 @@ def provision(vdisks,
               img=None,
               config_drives=None,
               swap_size=SWAP_MB * 1024 * 2,
-              swap_label=SWAP_LABEL):
+              swap_label=SWAP_LABEL,
+              cleanup_files=CLEANUP_FILES,
+              touch_files=TOUCH_FILES):
     verify_raw_image(img)
     orig_size, first_partition_offset = guess_first_partition_size_offset(img)
 
@@ -72,7 +90,9 @@ def provision(vdisks,
                    orig_size=orig_size,
                    first_partition_offset=first_partition_offset,
                    swap_size=swap_size,
-                   swap_label=swap_label)
+                   swap_label=swap_label,
+                   cleanup_files=cleanup_files,
+                   touch_files=touch_files)
 
 
 def clone_rootfs(dst, img=None, offset=0):
@@ -244,6 +264,14 @@ def run_dd(src, dst, **kwargs):
 
 def copy_config_drive(src, dst):
     run_dd(src, dst, bs='512c', conv='fsync')
+
+
+def anonymize(fsimage, cleanup_files, touch_files):
+    """ remove /etc/machine-id and similar per system files """
+    for path in cleanup_files:
+        e2fs_rm(path, fsimage)
+    for path in touch_files:
+        e2fs_touch(path, fsimage, force=True)
 
 
 def _provision_woe(vdisk):
