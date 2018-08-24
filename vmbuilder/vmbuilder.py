@@ -21,7 +21,10 @@ from .make_vm import os_lv_name, redefine_vm
 from .miscutils import refresh_sudo_credentials, forward_thread_exceptions
 from .provision_vm import get_provision_method
 from .driveutils import vg_is_ssd
-from .py3compat import subprocess
+from .py3compat import (
+    subprocess,
+    raise_exception,
+)
 from .sshutils import get_authorized_keys
 from .virtutils import destroy_vm, start_vm, libvirt_net_host_ip
 from .cloudinit_callback import CloudInitWebCallback
@@ -134,7 +137,7 @@ def rebuild_vms(vm_dict,
     tpool.join()
     callback_worker.join()
     if extype is not None:
-        raise extype(exvalue, bt)
+        raise_exception(extype, exvalue, bt)
 
 
 def prepare_cloud_img(source_image_data, cluster_def=None, force=False):

@@ -37,3 +37,9 @@ def _patch_py3_subprocess(subprocess):
 
 subprocess = _patch_py3_subprocess(_subprocess)
 
+
+def raise_exception(extype, exvalue, backtrace):
+    if sys.version_info.major == 2:
+        raise extype, exvalue, backtrace
+    else:
+        raise extype(exvalue, backtrace)
