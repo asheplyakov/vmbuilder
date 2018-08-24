@@ -28,7 +28,6 @@ class NoCloudGenerator(object):
 
     def _write(self, strdat, name):
         if not os.path.exists(self._base_dir):
-            print("mkdir -p %s" % self._base_dir)
             os.makedirs(self._base_dir)
         with open(os.path.join(self._base_dir, name), 'w') as f:
             f.write(strdat)
