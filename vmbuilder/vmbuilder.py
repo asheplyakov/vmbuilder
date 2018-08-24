@@ -57,7 +57,7 @@ def rebuild_vms(vm_dict,
             destroy_vm(vm['name'], undefine=True, purge=True)
         return
 
-    storage_conf = cluster_def['drives']
+    storage_conf = cluster_def['machine']['drives']
     source_image_data = cluster_def['source_image']
     distro = cluster_def.get('distro', 'ubuntu')
 
@@ -214,7 +214,9 @@ def merge_vm_info(cluster_def, vm_def):
         if var in vm_def:
             dst[var] = vm_def[var]
 
-    drives = copy.deepcopy(_param('drives'))
+    drives = copy.deepcopy(cluster_def['machine']['drives'])
+    drives.update(vm_def.get('drives', {}))
+
     extra_drives = {
         'install_image': os.path.expanduser(_param('source_image')['path']),
     }
