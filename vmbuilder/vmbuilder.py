@@ -17,7 +17,7 @@ from multiprocessing.pool import ThreadPool as ThreadPool
 from threading import Semaphore
 
 from .gen_cloud_conf import generate_cc
-from .make_vm import os_lv_name, redefine_vm
+from .make_vm import redefine_vm
 from .miscutils import (
     forward_thread_exceptions,
     refresh_sudo_credentials,
@@ -107,8 +107,8 @@ def rebuild_vms(vm_dict,
             redefine_vm(vm_def,
                         net_conf=cluster_def['networks'],
                         template=vm_def['vm_template'])
-        vdisk = '/dev/{vg}/{lv}'.format(vg=vm_def['drives']['os']['vg'],
-                                        lv=os_lv_name(vm_name))
+        vdisk = '/dev/{vg}/{vm}-os'.format(vg=vm_def['drives']['os']['vg'],
+                                           vm=vm_name)
         destroy_vm(vm_name)
 
         provision = get_provision_method(vm_def['distro'])

@@ -18,19 +18,6 @@ from . import TEMPLATE_DIR
 VM_TEMPLATE = 'vm.xml'
 
 
-def data_lv_name(vm_name, osd_idx=None):
-    return '{vm_name}_{osd_idx}-data'.format(vm_name=vm_name,
-                                             osd_idx=osd_idx)
-
-
-def journal_lv_name(vm_name, osd_idx=None):
-    return '{vm_name}-journal'.format(vm_name=vm_name)
-
-
-def os_lv_name(vm_name, osd_idx=None):
-    return '{vm_name}-os'.format(vm_name=vm_name)
-
-
 def make_vm_xml(vm_def,
                 net_conf=None,
                 template=VM_TEMPLATE,
@@ -39,6 +26,16 @@ def make_vm_xml(vm_def,
 
     vm_name = vm_def['vm_name']
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
+    extra_functions = {
+        'ord': ord,
+        'chr': chr,
+    }
+    extra_filters = {
+        'hex': hex,
+    }
+    env.globals.update(extra_functions)
+    env.filters.update(extra_filters)
+
     vm_params = copy.deepcopy(vm_def)
     # keep MAC addresses stable across VM re-definitions
     old_ifaces = get_vm_macs(vm_name, conn=conn)
@@ -47,8 +44,6 @@ def make_vm_xml(vm_def,
                   for name, iface in net_conf.items())
     vm_params.update(interfaces=ifaces)
 
-    env.filters['hex'] = hex
-    env.globals.update(osd_lv_name=data_lv_name)
     tpl = env.get_or_select_template(template)
     raw_out = tpl.render(vm_params)
     try:
@@ -68,7 +63,7 @@ def create_vm_lvs(vm_name=None,
 
     def make_lvs(group, data, **kwargs):
         # data = {'vg': 'ssd-vg', 'thin_pool': 'vmpool'}
-        lv_name = globals()['%s_lv_name' % group](vm_name, **kwargs)
+        lv_name = '%s-%s' % (vm_name, group)
         create_thin_lv(vg=drives[group]['vg'],
                        thin_pool=drives[group]['thin_pool'],
                        size=drives[group]['disk_size'],

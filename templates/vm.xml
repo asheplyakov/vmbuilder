@@ -33,34 +33,18 @@
       <rate bytes='1024'/>
       <backend model='random'>/dev/random</backend>
    </rng>
-{% set drive_slot_start = 5 %}
+{% for group in drives %}
+{% if 'vg' in drives[group] %}
     <disk type='block' device='disk'>
       <driver name='qemu' type='raw' cache='none'/>
-      <source dev='/dev/{{ drives.os.vg }}/{{ vm_name }}-os'/>
-      <target dev='vda' bus='virtio'/>
-      <serial>{{ vm_name }}_os</serial>
-      <address type='pci' domain='0x0000' bus='0x00' slot='{{ drive_slot_start|hex }}' function='0x0'/>
-      <boot order='1'/>
+      <source dev='/dev/{{ drives[group].vg }}/{{ vm_name }}-{{ group }}'/>
+      <target dev='vd{{ chr(ord("a") + loop.index0) }}' bus='virtio'/>
+      <serial>{{ vm_name }}_{{ group }}</serial>
+      <address type='pci' domain='0x0000' bus='0x00' slot='{{ (loop.index0 + 2)|hex }}' function='0x0'/>
+      {% if group == 'os' %}<boot order='1'/>{% endif %}
     </disk>
-{% if role == 'osds' %}
-    <disk type='block' device='disk'>
-      <driver name='qemu' type='raw' cache='none'/>
-      <source dev='/dev/{{ drives.journal.vg }}/{{ journal_lv_name }}'/>
-      <target dev='vdc' bus='virtio'/>
-      <serial>{{ vm_name }}_JOURNAL</serial>
-      <address type='pci' domain='0x0000' bus='0x00' slot='{{ (drive_slot_start + 2)|hex }}' function='0x0'/>
-    </disk>
-{% set drive_indices = 'defghijklmnopqrstuvwxyz' %}
-{% for osd_idx in range(0, osds_per_node) %}
-    <disk type='block' device='disk'>
-      <driver name='qemu' type='raw' cache='none'/>
-      <source dev='/dev/{{ drives.data.vg }}/{{ osd_lv_name(vm_name, osd_idx) }}'/>
-      <target dev='vd{{ drive_indices[osd_idx] }}' bus='virtio'/>
-      <serial>{{ vm_name }}_{{ osd_idx }}_DATA</serial>
-      <address type='pci' domain='0x0000' bus='0x00' slot='{{ (osd_idx + drive_slot_start + 3)|hex }}' function='0x0'/>
-    </disk>
-{% endfor %}
 {% endif %}
+{% endfor %}
 {% for name, iface in interfaces.items() %}
     <interface type='network'>
       <source network='{{ iface.source_net }}'/>
