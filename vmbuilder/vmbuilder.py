@@ -18,7 +18,12 @@ from threading import Semaphore
 
 from .gen_cloud_conf import generate_cc
 from .make_vm import os_lv_name, redefine_vm
-from .miscutils import refresh_sudo_credentials, forward_thread_exceptions
+from .miscutils import (
+    forward_thread_exceptions,
+    refresh_sudo_credentials,
+    yaml_ordered_load,
+)
+
 from .provision_vm import get_provision_method
 from .driveutils import vg_is_ssd
 from .py3compat import (
@@ -269,7 +274,7 @@ def main():
         raise ValueError('cluster definition file must be specified')
 
     with open(options.paramsfile, 'r') as f:
-        cluster_def = yaml.load(f)
+        cluster_def = yaml_ordered_load(f)
 
     vm_dict = None
     if args:
