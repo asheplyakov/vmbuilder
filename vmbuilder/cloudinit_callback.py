@@ -47,29 +47,49 @@ class VMRegister(object):
 class InventoryGenerator(object):
     """Generate ansible inventory from data reported by cloud-init
     """
-    def __init__(self, hosts_with_roles, filename=None):
+    def __init__(self, vms, filename=None):
         self._filename = filename
         self._inventory = OrderedDict((role, []) for role in
-            ['all'] + sorted(set(r for _, r in hosts_with_roles.items())))
-        self._hosts_with_roles = dict((host.split('.')[0].lower(), role)
-                                      for host, role
-                                      in hosts_with_roles.items())
+            ['all'] + sorted(set(vm['role'] for vm in vms)))
+        self._hosts_by_id = dict((vm['instance_id'], vm) for vm in vms)
+        self._hosts_by_name = dict((vm['vm_name'].lower(), vm) for vm in vms)
+
+    def _get_host(self, entry):
+        host = self._hosts_by_id.get(entry['instance_id'])
+        if host is None:
+            host = self._hosts_by_name.get(entry['host'], {})
+        return host
+
+    def _role_of(self, entry):
+        return self._get_host(entry).get('role', 'all')
+
+    def _copy_extra_info(self, host, entry):
+        extra_info = {}
+        if entry['os'] == 'windows':
+            admin_password = host.get('admin_password')
+            if admin_password:
+                extra_info['ansible_password'] = admin_password
+        return extra_info
 
     def add(self, hostname, ip, **kwargs):
         short_hostname = hostname.split('.')[0]
         entry = {
             'host': short_hostname,
             'ip': ip,
+            'instance_id': kwargs['instance_id'],
             'os': kwargs.get('os', 'unix'),
         }
-        role = self._hosts_with_roles.get(short_hostname.lower(), 'all')
+        host = self._get_host(entry)
+        entry.update(self._copy_extra_info(host, entry))
+        role = host.get('role', 'all')
         self._inventory[role].append(entry)
 
     def _make_host_entry(self, host):
         if host['os'] == 'windows':
             fmt = '{hostname} ansible_host={ip} ansible_port=5985 '\
                   'ansible_connection=winrm ansible_winrm_scheme=http '\
-                  'ansible_winrm_transport=basic ansible_user=administrator'
+                  'ansible_winrm_transport=basic ansible_user=administrator '\
+                  'ansible_password={ansible_password}'
         else:
             fmt = '{hostname} ansible_host={ip} ansible_user=root'
         return fmt.format(hostname=host['host'], ip=host['ip'])
@@ -204,12 +224,9 @@ class CloudInitWebCallback(object):
 
 
 def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None,
-                           inventory=None, ssh_config=None):
+                           ssh_config=None):
     vms = dict((vm, 'all') for vm in vms2wait)
     async_hooks = []
-    if inventory:
-        inventory_gen = InventoryGenerator(vms, filename=inventory)
-        async_hooks.append(inventory_gen.update)
     if ssh_config:
         ssh_conf_gen = SshConfigGenerator(path=ssh_config)
         async_hooks.append(ssh_config.update)
@@ -227,14 +244,11 @@ def main():
     parser.add_option('-l', '--listen', dest='listen',
                       default='0.0.0.0:8080',
                       help='interface/address to listen at')
-    parser.add_option('-i', '--inventory', dest='inventory',
-                      help='write ansible inventory to this file')
     parser.add_option('-s', '--ssh-config', dest='ssh_config',
                       help='write ssh config file here')
 
     options, args = parser.parse_args()
     run_cloudinit_callback([options.listen], vms2wait=set(args),
-                           inventory=options.inventory,
                            ssh_config=options.ssh_config)
 
 

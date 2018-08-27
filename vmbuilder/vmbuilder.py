@@ -81,8 +81,7 @@ def rebuild_vms(vm_dict,
     tpool = ThreadPool(processes=len(vm_list))
 
     inventory = '%s/hosts' % cluster_def['cluster_name']
-    vms_with_roles = dict((vm['vm_name'], vm['role']) for vm in vm_list)
-    inventory_gen = InventoryGenerator(vms_with_roles, filename=inventory)
+    inventory_gen = InventoryGenerator(vm_list, filename=inventory)
     ssh_config = '%s/ssh_config' % cluster_def['cluster_name']
     ssh_conf_gen = SshConfigGenerator(path=ssh_config)
 
