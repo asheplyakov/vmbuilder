@@ -14,9 +14,9 @@ import yaml
 
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool as ThreadPool
-from threading import Semaphore
 
 from .gen_cloud_conf import generate_cc
+from .iothrottler import IOThrottler
 from .make_vm import redefine_vm
 from .miscutils import (
     forward_thread_exceptions,
@@ -25,7 +25,6 @@ from .miscutils import (
 )
 
 from .provision_vm import get_provision_method
-from .driveutils import vg_is_ssd
 from .py3compat import (
     subprocess,
     raise_exception,
@@ -46,8 +45,7 @@ def rebuild_vms(vm_dict,
                 cluster_def=None,
                 redefine=False,
                 delete=False,
-                parallel=0,
-                parallel_provision=0):
+                parallel=0):
     if vm_dict is None:
         vm_dict = cluster_def['hosts']
     vm_list = [(vm, role) for role in vm_dict for vm in vm_dict[role]]
@@ -57,52 +55,49 @@ def rebuild_vms(vm_dict,
             destroy_vm(vm['name'], undefine=True, purge=True)
         return
 
-    storage_conf = cluster_def['machine']['drives']
     source_image_data = cluster_def['source_image']
     distro = cluster_def.get('distro', 'ubuntu')
 
+    source_image = prepare_cloud_img(source_image_data,
+                                     cluster_def=cluster_def)
+
+    provisioned = Queue.Queue()
+    vms2wait = set([vm['name'] for vm, _ in vm_list])
+
+    new_vm_list = []
+
+    for vm, role in vm_list:
+        vm_def = copy.deepcopy(vm)
+        vm_def['role'] = role
+        vm_def = merge_vm_info(cluster_def, vm_def)
+
+        vm_def = merge_vm_info(cluster_def, vm_def)
+        new_vm_list.append(vm_def)
+
+    vm_list = new_vm_list
     # VMs heavily use disk on first boot (dist-upgrade, install additional
     # packages, etc). Therefore one might want to limit the number of VMs
     # which do initial configuration step concurrently.
     if not parallel:
         parallel = vm_count
-    # Typically all virtual hard drives are backed by the same physical hard
-    # drive, therefore having too many e2image processes increases the
-    # provisioning time due to extra disk seeks. However for SSD backed LVs
-    # having multiple writers is OK and improves the performance.
-    if not parallel_provision:
-        os_vg = storage_conf['os']['vg']
-        parallel_provision = max(vm_count / 2, 1) if vg_is_ssd(os_vg) else 1
+    io_throttler = IOThrottler(vm_list, max_concurrency_level=parallel)
 
-    source_image = prepare_cloud_img(source_image_data,
-                                     cluster_def=cluster_def)
-
-    vm_start_throttle_sem = Semaphore(parallel)
-    provisioned = Queue.Queue()
-    vms2wait = set([vm['name'] for vm, _ in vm_list])
-
-    # runs in the web callback thread
-    def vm_ready_cb(**kwargs):
-        # invoked when cloud-init "phones home"
-        # it's ok to start one more VM
-        vm_start_throttle_sem.release()
+    tpool = ThreadPool(processes=len(vm_list))
 
     inventory = 'hosts_%s.txt' % cluster_def.get('cluster_name', 'unknown')
     callback_worker = CloudInitWebCallback([web_callback_addr(cluster_def)],
-                                           vms2wait=dict((vm['name'], role)
-                                                         for vm, role in vm_list),
-                                           vm_ready_hooks=[vm_ready_cb],
+                                           vms2wait=dict((vm['vm_name'], vm['role'])
+                                                         for vm in vm_list),
+                                           vm_ready_hooks=[io_throttler.release],
                                            inventory_filename=inventory)
-    tpool = ThreadPool(processes=parallel_provision)
 
     # runs in the provisioning thread
     @forward_thread_exceptions(provisioned)
-    def _rebuild_vm(vm_and_role):
-        vm_def = copy.deepcopy(vm_and_role[0])
-        vm_def['role'] = vm_and_role[1]
-        vm_def = merge_vm_info(cluster_def, vm_def)
-        vm_name = vm_def['vm_name']
+    def _rebuild_vm(vm):
+        vm_def = copy.deepcopy(vm)
         vm_def['drives']['config_image'] = generate_cc(vm_def)
+        vm_name = vm_def['vm_name']
+        io_throttler.acquire(vm['instance_id'])
         if redefine:
             redefine_vm(vm_def,
                         template=vm_def['vm_template'])
@@ -132,8 +127,6 @@ def rebuild_vms(vm_dict,
             callback_worker.stop()
             extype, exvalue, bt = vm_name
             break
-        # at most *parallel* VMs concurrently booting the provisioned OS
-        vm_start_throttle_sem.acquire()
         start_vm(vm_name)
         started.add(vm_name)
 
@@ -268,11 +261,7 @@ def main():
                       help='remove specified VMs and reclaim their disk space')
     parser.add_option('-j', '--parallel', dest='parallel',
                       type=int, default=0,
-                      help='concurrency level (default: # of VMs)')
-    parser.add_option('-p', '--provision-jobs', dest='parallel_provision',
-                      type=int, default=0,
-                      help='privisioning concurrency level ('
-                      'default: 1 for HDD, # of VMs for SSD)')
+                      help='concurrency level (default: depends on backing storage)')
     options, args = parser.parse_args()
 
     if not options.paramsfile:
@@ -294,8 +283,7 @@ def main():
                 cluster_def=cluster_def,
                 redefine=options.redefine,
                 delete=options.delete,
-                parallel=options.parallel,
-                parallel_provision=options.parallel_provision)
+                parallel=options.parallel)
 
 
 if __name__ == '__main__':
