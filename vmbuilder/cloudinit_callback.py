@@ -34,6 +34,7 @@ class VMRegister(object):
             'hostname': web.input().hostname,
             'ip': web.ctx.ip,
             'ssh_key': web.input().pub_key_rsa.strip(),
+            'instance_id': web.input().instance_id.strip(),
             'user_agent': web.ctx.env['HTTP_USER_AGENT'],
         }
         cb = web.ctx.globals.callback

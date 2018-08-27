@@ -217,7 +217,9 @@ Function Download-Wmf5Server2008($architecture) {
 
 Function Phone-Home {
     if ($callback) {
-        $payload = @{hostname=$env:computername; pub_key_rsa="dummy"}
+        # XXX: RunOnce is limited to 260 characters, hence hard-code
+	# the instance_id into the (jinja2) template
+        $payload = @{hostname=$env:computername; pub_key_rsa="dummy"; instance_id="{{ instance_id }}"}
         Write-Log -message "calling back to '$callback'"
         Invoke-WebRequest -Uri $callback -Method POST -Body $payload
     }
