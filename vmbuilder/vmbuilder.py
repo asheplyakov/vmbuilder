@@ -33,10 +33,6 @@ from .sshutils import get_authorized_keys
 from .virtutils import destroy_vm, start_vm, libvirt_net_host_ip
 from .cloudinit_callback import CloudInitWebCallback
 
-MY_DIR = os.path.abspath(os.path.dirname(__file__))
-## --- configuration section starts here --- ##
-IMG_CACHE_DIR = '/srv/data/Public/img'
-## --- configuration section ends here --- ##
 
 WEB_CALLBACK_URL = 'http://{hypervisor_ip}:8080'
 
@@ -54,12 +50,6 @@ def rebuild_vms(vm_dict,
         for vm, _ in vm_list:
             destroy_vm(vm['name'], undefine=True, purge=True)
         return
-
-    source_image_data = cluster_def['source_image']
-    distro = cluster_def.get('distro', 'ubuntu')
-
-    source_image = prepare_cloud_img(source_image_data,
-                                     cluster_def=cluster_def)
 
     provisioned = Queue.Queue()
     vms2wait = set([vm['name'] for vm, _ in vm_list])
@@ -135,32 +125,6 @@ def rebuild_vms(vm_dict,
     callback_worker.join()
     if extype is not None:
         raise_exception(extype, exvalue, bt)
-
-
-def prepare_cloud_img(source_image_data, cluster_def=None, force=False):
-    if 'path' in source_image_data:
-        img_path = os.path.expanduser(source_image_data['path'])
-    elif 'url' in source_image_data:
-        img_url_tpl = source_image_data['url']
-        distro_release = cluster_def['distro_release']
-        img_url = img_url_tpl.format(distro_release=distro_release)
-        img_name = img_url.split('/')[-1] + '.raw'
-        img_path = os.path.join(IMG_CACHE_DIR, img_name)
-    else:
-        raise ValueError("Either image path or URL must be specified")
-
-    if os.path.isfile(img_path) and not force:
-        return img_path
-
-    orig_img = img_path.rsplit('.raw', 1)[0]
-    if not os.path.isfile(orig_img) or force:
-        subprocess.check_call(['wget', '-N', '-O', orig_img, img_url])
-
-    cmd = 'qemu-img convert -f qcow2 -O raw'.split()
-    cmd.extend([orig_img, '{}.tmp'.format(img_path)])
-    subprocess.check_call(cmd)
-    os.rename('{}.tmp'.format(img_path), img_path)
-    return img_path
 
 
 def merge_vm_info(cluster_def, vm_def):
