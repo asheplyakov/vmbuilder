@@ -183,7 +183,7 @@ def merge_vm_info(cluster_def, vm_def):
         'swap_label': 'MOREVM',
         'vm_template': 'vm.xml',
         'graphics': {},
-        'vm_uuid': uuid.uuid4(),
+        'instance_id': uuid.uuid4(),
     }
 
     def _base_param(var):

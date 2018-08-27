@@ -69,8 +69,8 @@ def pick_generator(distro):
 def generate_cc(vm_def, template_dir=TEMPLATE_DIR):
     vm_name = vm_def['vm_name']
     data = copy.deepcopy(vm_def)
-    if 'vm_uuid' not in data:
-        data['vm_uuid'] = uuid.uuid4()
+    if 'instance_id' not in data:
+        data['instance_id'] = uuid.uuid4()
 
     generatorClass = pick_generator(vm_def['distro'])
     gen = generatorClass(vm_name=vm_name, distro=vm_def['distro'],
