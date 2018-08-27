@@ -29,9 +29,15 @@ from .py3compat import (
     subprocess,
     raise_exception,
 )
-from .sshutils import get_authorized_keys
+from .sshutils import (
+    get_authorized_keys,
+    SshConfigGenerator,
+)
 from .virtutils import destroy_vm, start_vm, libvirt_net_host_ip
-from .cloudinit_callback import CloudInitWebCallback
+from .cloudinit_callback import (
+    CloudInitWebCallback,
+    InventoryGenerator,
+)
 
 
 WEB_CALLBACK_URL = 'http://{hypervisor_ip}:8080'
@@ -74,12 +80,18 @@ def rebuild_vms(vm_dict,
 
     tpool = ThreadPool(processes=len(vm_list))
 
-    inventory = 'hosts_%s.txt' % cluster_def.get('cluster_name', 'unknown')
+    inventory = '%s/hosts' % cluster_def['cluster_name']
+    vms_with_roles = dict((vm['vm_name'], vm['role']) for vm in vm_list)
+    inventory_gen = InventoryGenerator(vms_with_roles, filename=inventory)
+    ssh_config = '%s/ssh_config' % cluster_def['cluster_name']
+    ssh_conf_gen = SshConfigGenerator(path=ssh_config)
+
     callback_worker = CloudInitWebCallback([web_callback_addr(cluster_def)],
                                            vms2wait=dict((vm['vm_name'], vm['role'])
                                                          for vm in vm_list),
                                            vm_ready_hooks=[io_throttler.release],
-                                           inventory_filename=inventory)
+                                           async_hooks=[inventory_gen.update,
+                                                        ssh_conf_gen.update])
 
     # runs in the provisioning thread
     @forward_thread_exceptions(provisioned)

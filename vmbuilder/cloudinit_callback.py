@@ -110,7 +110,7 @@ class CloudInitWebCallback(object):
     - manages VMs' ssh public keys in the local ~/.ssh/known_hosts file
     """
     def __init__(self, httpd_args, vms2wait=None, vm_ready_hooks=None,
-                 async_hooks=None,
+                 async_hooks=[],
                  inventory_filename=None):
         self.vms2wait = vms2wait if vms2wait else {}
         self._stop_event = Event()
@@ -127,19 +127,12 @@ class CloudInitWebCallback(object):
         if vm_ready_hooks:
             self._hooks.extend(vm_ready_hooks)
 
-        self._inventory_generator = InventoryGenerator(vms2wait,\
-            filename=inventory_filename)
-        self._ssh_config_generator = SshConfigGenerator()
-
         # defines the actual actions with VM info
         self._async_hooks = [
             self._update_ssh_known_hosts,
-            self._inventory_generator.update,
-            self._ssh_config_generator.update,
-            self._report_vm_ready,
         ]
-        if async_hooks:
-            self._async_hooks.extend(async_hooks)
+        self._async_hooks.extend(async_hooks)
+        self._async_hooks.append(self._report_vm_ready)
 
         urls = ('/', 'VMRegister')
         self._app = web.application(urls, globals())
@@ -210,9 +203,19 @@ class CloudInitWebCallback(object):
         self._ssh_keys_queue.put(None)
 
 
-def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None):
+def run_cloudinit_callback(httpd_args, vms2wait=None, vm_ready_hook=None,
+                           inventory=None, ssh_config=None):
     vms = dict((vm, 'all') for vm in vms2wait)
+    async_hooks = []
+    if inventory:
+        inventory_gen = InventoryGenerator(vms, filename=inventory)
+        async_hooks.append(inventory_gen.update)
+    if ssh_config:
+        ssh_conf_gen = SshConfigGenerator(path=ssh_config)
+        async_hooks.append(ssh_config.update)
+
     server = CloudInitWebCallback(httpd_args, vms2wait=vms,
+                                  async_hooks=async_hooks,
                                   vm_ready_hooks=[vm_ready_hook]
                                   if vm_ready_hook else None)
     server.start()
@@ -224,8 +227,15 @@ def main():
     parser.add_option('-l', '--listen', dest='listen',
                       default='0.0.0.0:8080',
                       help='interface/address to listen at')
+    parser.add_option('-i', '--inventory', dest='inventory',
+                      help='write ansible inventory to this file')
+    parser.add_option('-s', '--ssh-config', dest='ssh_config',
+                      help='write ssh config file here')
+
     options, args = parser.parse_args()
-    run_cloudinit_callback([options.listen], vms2wait=set(args))
+    run_cloudinit_callback([options.listen], vms2wait=set(args),
+                           inventory=options.inventory,
+                           ssh_config=options.ssh_config)
 
 
 if __name__ == '__main__':
