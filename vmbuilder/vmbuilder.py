@@ -105,7 +105,6 @@ def rebuild_vms(vm_dict,
         vm_def['drives']['config_image'] = generate_cc(vm_def)
         if redefine:
             redefine_vm(vm_def,
-                        net_conf=cluster_def['networks'],
                         template=vm_def['vm_template'])
         vdisk = '/dev/{vg}/{vm}-os'.format(vg=vm_def['drives']['os']['vg'],
                                            vm=vm_name)
@@ -224,14 +223,18 @@ def merge_vm_info(cluster_def, vm_def):
     drives.update(extra_drives)
     new_vm_def.update(drives=drives)
 
+    interfaces = copy.deepcopy(cluster_def['machine']['interfaces'])
+    interfaces.update(vm_def.get('interfaces', {}))
+    new_vm_def.update(interfaces=interfaces)
+
     auth_data = {
         'ssh_authorized_keys': get_authorized_keys(),
         'whoami': os.environ['USER'],
     }
     new_vm_def.update(auth_data)
 
-    net_conf = cluster_def['networks']
-    bridge_ip = libvirt_net_host_ip(net_conf['default']['source_net'])
+    interfaces = cluster_def['machine']['interfaces']
+    bridge_ip = libvirt_net_host_ip(interfaces['default']['source_net'])
     new_vm_def.update(hypervisor_ip=bridge_ip)
 
     http_proxy_tpl = cluster_def.get('net_conf', {}).get('http_proxy')

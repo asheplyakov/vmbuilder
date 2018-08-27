@@ -19,7 +19,6 @@ VM_TEMPLATE = 'vm.xml'
 
 
 def make_vm_xml(vm_def,
-                net_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 conn=LIBVIRT_CONNECTION):
@@ -41,7 +40,7 @@ def make_vm_xml(vm_def,
     old_ifaces = get_vm_macs(vm_name, conn=conn)
     ifaces = dict((name, {'source_net': iface['source_net'],
                           'mac': old_ifaces.get(iface['source_net'])})
-                  for name, iface in net_conf.items())
+                  for name, iface in vm_def['interfaces'].items())
     vm_params.update(interfaces=ifaces)
 
     tpl = env.get_or_select_template(template)
@@ -80,7 +79,6 @@ def create_vm_lvs(vm_name=None,
 
 
 def redefine_vm(vm_def,
-                net_conf=None,
                 template=VM_TEMPLATE,
                 template_dir=TEMPLATE_DIR,
                 dry_run=False,
@@ -88,7 +86,6 @@ def redefine_vm(vm_def,
 
     vm_name = vm_def['vm_name']
     new_vm_xml = make_vm_xml(vm_def,
-                             net_conf=net_conf,
                              template=template,
                              template_dir=template_dir,
                              conn=conn)
