@@ -73,6 +73,8 @@ def yaml_ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict)
 
 
 def mkdir_p(thedir):
+    if thedir in ('', '.', '..'):
+        return
     try:
         os.makedirs(thedir)
     except OSError as err:
