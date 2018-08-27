@@ -1,0 +1,74 @@
+
+cluster_name: sssd
+# Install ALTLinux by default
+distro: altlinux
+distro_release: p8
+source_image:
+  path: ~/dist/alt-p8-cloud-20180612-x86_64.img
+admin_password: 'r00tme'
+
+
+# Default VM: 2 CPUs, 1 GB RAM, 2 GB swap, 4 GB hard drive, 1 NIC
+# attached to the `default` libvirt network.
+# VMs' hard drives are allocated from the nvme_crypt/vmpool thin pool
+
+machine:
+  cpu_count: 2
+  base_ram: 1024
+  swap_size: 2048
+  drives:
+    os:
+      vg: nvme_crypt
+      thin_pool: vmpool
+      disk_size: 4096
+  # Attach VMs to the `default` libvirt network
+  interfaces:
+    default:
+      source_net: default
+
+# Lab with 7 hosts:
+# samba AD domain controller running ALTLinux
+# AD domain controller running Windows 2008 r2
+# Linux domain members running ALTLinux, Fedora, Ubuntu
+# Windows domain member running Windows 2008 r2
+
+hosts:
+  samba_master_dc:
+    - name: dc00
+      cpu_count: 4
+  linux_members:
+    - name: cl00
+  windows_dc:
+    - name: wdc0
+      cpu_count: 4
+      base_ram: 2048
+      distro: woe2008
+      distro_release: woe2008
+      vm_template: vm_woe.xml
+      graphics:
+        spice: true
+      source_image:
+        path: ~/dist/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso
+      drives:
+        os:
+          vg: hdcrypt
+          thin_pool: vmpool
+          disk_size: 20480
+  windows_members:
+    - name: wc00
+      distro: woe2008
+      distro_release: woe2008
+      vm_template: vm_woe.xml
+      graphics:
+        spice: true
+      source_image:
+        path: ~/dist/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso
+      drives:
+        os:
+          vg: hdcrypt
+          thin_pool: vmpool
+          disk_size: 20480
+
+# Use this proxy when downloading files in VMs.
+#net_conf:
+#  http_proxy: "http://{hypervisor_ip}:3128"

@@ -1,0 +1,39 @@
+
+cluster_name: alt
+distro: altlinux
+distro_release: p8
+source_image:
+  path: ~/dist/alt-p8-cloud-20180612-x86_64.img
+admin_password: 'r00tme'
+
+
+# Default VM configuration: 2 CPUs, 1GB RAM, 4 GB hard drive
+machine:
+  cpu_count: 2
+  base_ram: 1024
+  swap_size: 1024
+  drives:
+    # this one is mandatory
+    os:
+      vg: nvme_crypt
+      thin_pool: vmpool
+      disk_size: 4096
+  interfaces:
+    default:
+      source_net: default
+
+hosts:
+  servers:
+    - name: alt00
+      drives:
+        # additional drive
+        data:
+          vg: hdcrypt
+          thin_pool: vmpool
+          disk_size: 32768
+  clients:
+    - name: alt01
+
+networks:
+  default:
+    source_net: default
