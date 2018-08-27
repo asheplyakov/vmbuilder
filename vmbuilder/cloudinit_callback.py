@@ -19,7 +19,10 @@ from optparse import OptionParser
 from threading import Thread, Event
 
 from .sshutils import update_known_hosts, SshConfigGenerator
-from .miscutils import safe_save_file
+from .miscutils import (
+    safe_save_file,
+    mkdir_p,
+)
 
 
 class VMRegister(object):
@@ -87,6 +90,7 @@ class InventoryGenerator(object):
         if self._filename is None:
             self._write(sys.stdout)
         else:
+            mkdir_p(os.path.dirname(self._filename))
             with safe_save_file(self._filename) as f:
                 self._write(f)
 
