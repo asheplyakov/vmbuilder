@@ -95,10 +95,28 @@ def provision(vdisks,
                    touch_files=touch_files)
 
 
+def guess_fstype(bdev, offset=0):
+    """ Check if block device holds an ext[234] filesystem """
+    cmd = [
+        'blkid', '--probe', '--offset=%s' % str(offset),
+        '--output=export', bdev
+    ]
+    out = subprocess.check_output(cmd).strip().split()
+    for l in out:
+        if l.startswith('TYPE='):
+            fstype = l.split('=')[1].strip()
+            return fstype
+
+
 def clone_rootfs(dst, img=None, offset=0):
-    cmd = ['e2image', '-p', '-aro', str(offset * 512), img, dst]
+    bytes_offset = offset * 512
+    fstype = guess_fstype(img, offset=bytes_offset)
+    if fstype not in ('ext2', 'ext3', 'ext4'):
+        raise RuntimeError('provisioning %s filesystem is not supported')
+    cmd = ['e2image', '-p', '-aro', str(bytes_offset), img, dst]
     subprocess.check_call(cmd)
-    disable_ext4_journal(dst)
+    if fstype in ('ext4'):
+        disable_ext4_journal(dst)
     run_e2fsck(dst, '-f', '-p')
     resize2fs(dst, '-p')
     run_e2fsck(dst, '-f', '-p', '-D')
