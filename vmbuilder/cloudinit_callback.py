@@ -57,7 +57,7 @@ class InventoryGenerator(object):
     def _get_host(self, entry):
         host = self._hosts_by_id.get(entry['instance_id'])
         if host is None:
-            host = self._hosts_by_name.get(entry['host'], {})
+            host = self._hosts_by_name.get(entry['short_hostname'].lower(), {})
         return host
 
     def _role_of(self, entry):
@@ -74,7 +74,7 @@ class InventoryGenerator(object):
     def add(self, hostname, ip, **kwargs):
         short_hostname = hostname.split('.')[0]
         entry = {
-            'host': short_hostname,
+            'short_hostname': short_hostname,
             'ip': ip,
             'instance_id': kwargs['instance_id'],
             'os': kwargs.get('os', 'unix'),
@@ -86,13 +86,13 @@ class InventoryGenerator(object):
 
     def _make_host_entry(self, host):
         if host['os'] == 'windows':
-            fmt = '{hostname} ansible_host={ip} ansible_port=5985 '\
+            fmt = '{short_hostname} ansible_host={ip} ansible_port=5985 '\
                   'ansible_connection=winrm ansible_winrm_scheme=http '\
                   'ansible_winrm_transport=basic ansible_user=administrator '\
                   'ansible_password={ansible_password}'
         else:
-            fmt = '{hostname} ansible_host={ip} ansible_user=root'
-        return fmt.format(hostname=host['host'], ip=host['ip'])
+            fmt = '{short_hostname} ansible_host={ip} ansible_user=root'
+        return fmt.format(**host)
 
     def update(self, hostname, ip, **kwargs):
         self.add(hostname, ip, **kwargs)
