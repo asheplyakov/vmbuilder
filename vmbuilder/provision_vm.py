@@ -98,8 +98,7 @@ def provision(vdisks,
 def guess_fstype(bdev, offset=0):
     """ Check if block device holds an ext[234] filesystem """
     cmd = [
-        'blkid', '--probe', '--offset=%s' % str(offset),
-        '--output=export', bdev
+        'blkid', '-p', '-O', str(offset), '-o', 'export', bdev
     ]
     out = subprocess.check_output(cmd).strip().split()
     for l in out:
