@@ -68,14 +68,15 @@
     state: started
   become: true
 
+- include: libvirtnet.yml
+  when: libvirt_default_net is defined
+
 - name: find out running libvirt networks
   command: >
     virsh -q net-list --name
   register: active_libvirt_networks
   become: true
 
-- include: libvirtnet.yml
-  when: libvirt_default_net is defined
 
 - name: start default libvirt network
   command: >
