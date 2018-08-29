@@ -201,7 +201,7 @@ def get_dm_lv_name(lvpath):
 def activate_partitions(vdisk):
     vdisk = get_dm_lv_name(vdisk)
     with KPARTX_MUTEX:
-        subprocess.check_call(['sudo', 'kpartx', '-a', vdisk])
+        subprocess.check_call(['sudo', 'kpartx', '-s', '-a', vdisk])
     fixup_vdisk_ownership(vdisk)
 
 
