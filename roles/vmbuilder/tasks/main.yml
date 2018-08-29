@@ -20,6 +20,24 @@
     - wget
   when: ansible_os_family in ['ALT', 'Altlinux']
 
+- set_fact:
+    required_packages:
+      - libvirt-bin
+      - qemu-system-x86
+      - qemu-kvm
+      - lvm2
+      - kpartx
+      - qemu-utils
+      - genisoimage
+      - mtools
+      - python-jinja2
+      - python-webpy
+      - python-winrm
+      - dnsutils
+      - virt-viewer
+      - wget
+  when: ansible_os_family == 'Debian'
+
 - name: install required packages
   package: name={{ item }} state=present
   with_items: "{{ required_packages }}"
@@ -55,6 +73,7 @@
     mode: 0400
     content: 'root ALL=(ALL) ALL'
   become: true
+  when: ansible_os_family in ['ALT', 'ALTLinux']
 
 - include: ./lvm.yml
   when:
