@@ -57,7 +57,7 @@ Usage
 * Define the lab/cluster: how many VMs, RAM, virtual drive size,
   OS/distribution, etc, see the `examples` directory
 * Start provisioning ::
-    python -m vmbuilder.vmbuiler -r -c mylab.yml
+    ./bin/vmbuilder -r -c mylab.yml
 * Wait until the tool completes
 * On success the inventory file (called after the cluster name) and
   `.ssh/config` is created, so one further configure the lab (and/or
