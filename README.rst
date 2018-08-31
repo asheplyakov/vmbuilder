@@ -68,7 +68,7 @@ Removing the lab
 ================
 
 ::
-  python -m vmbuilder.vmbuilder -d -c mylab.yml
+  ./bin/vmbuilder -d -c mylab.yml
 
 This will immediately shutdown (`destroy`) VMs, undefine them, and release
 their storage (thin volumes). Obviously there's no way to undo this action.
