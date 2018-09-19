@@ -311,6 +311,7 @@ def provision_woe(vdisks,
 def get_provision_method(distro):
     provision_methods = {
         'woe2008': provision_woe,
+        'woe10': provision_woe,
     }
     return provision_methods.get(distro, provision)
 

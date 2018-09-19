@@ -62,6 +62,7 @@ class NoCloudGenerator(object):
 def pick_generator(distro):
     generators = {
         'woe2008': Woe2008Autounattend,
+        'woe10': Woe2008Autounattend,
     }
     return generators.get(distro, NoCloudGenerator)
 
