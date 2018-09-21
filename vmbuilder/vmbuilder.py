@@ -138,9 +138,6 @@ def rebuild_vms(vm_dict,
 
 def merge_vm_info(cluster_def, vm_def):
 
-    new_vm_def = copy.deepcopy(vm_def)
-    new_vm_def['vm_name'] = new_vm_def['name']
-
     builtin_machine = {
         'cpu_count': 1,
         'base_ram': 1024,
@@ -152,16 +149,10 @@ def merge_vm_info(cluster_def, vm_def):
         'instance_id': uuid.uuid4(),
     }
 
-    def _base_param(var):
-        val = vm_def.get(var)
-        if val is None:
-            val = cluster_def['machine'].get(var)
-        if val is None:
-            val = builtin_machine[var]
-        return val
-
-    for var in builtin_machine.keys():
-        new_vm_def[var] = _base_param(var)
+    new_vm_def = copy.deepcopy(builtin_machine)
+    new_vm_def.update(copy.deepcopy(cluster_def['machine']))
+    new_vm_def.update(copy.deepcopy(vm_def))
+    new_vm_def['vm_name'] = new_vm_def['name']
 
     required_params = (
         'distro',
