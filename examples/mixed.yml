@@ -54,6 +54,8 @@ hosts:
           vg: hdcrypt
           thin_pool: vmpool
           disk_size: 20480
+        drivers:
+          path: ~/dist/virtio-win-0.1.141.iso
   windows_members:
     - name: wc00
       distro: woe2008
@@ -68,6 +70,8 @@ hosts:
           vg: hdcrypt
           thin_pool: vmpool
           disk_size: 20480
+        drivers:
+          path: ~/dist/virtio-win-0.1.141.iso
 
 # Use this proxy when downloading files in VMs.
 #net_conf:

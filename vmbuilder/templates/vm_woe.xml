@@ -28,7 +28,12 @@
     <disk type='block' device='disk'>
       <driver name='qemu' type='raw' cache='none'/>
       <source dev='/dev/{{ drives.os.vg }}/{{ vm_name }}-os'/>
+      {% if 'drivers' in drives %}
+      <target dev='vda' bus='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x2' function='0x0'/>
+      {% else %}
       <target dev='sda' bus='sata'/>
+      {% endif %}
       <boot order='2'/>
     </disk>
     <disk type='file' device='cdrom'>
@@ -38,6 +43,14 @@
       <readonly/>
       <boot order='1'/>
     </disk>
+    {% if 'drivers' in drives %}
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw' cache='none'/>
+      <source file='{{ drives.drivers }}'/>
+      <target dev='hdc' bus='ide'/>
+      <readonly/>
+    </disk>
+    {% endif %}
     <disk type='file' device='floppy'>
       <driver name='qemu' type='raw'/>
       <source file='{{ drives.config_image }}'/>
@@ -54,7 +67,7 @@
 {% if iface.mac %}
       <mac address='{{ iface.mac }}'/>
 {% endif %}
-      <model type='e1000'/>
+      <model type='{{ iface.model|default("e1000") }}'/>
     </interface>
 {% endfor %}
     <input type='mouse' bus='ps2'/>

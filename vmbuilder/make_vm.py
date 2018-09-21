@@ -38,10 +38,10 @@ def make_vm_xml(vm_def,
     vm_params = copy.deepcopy(vm_def)
     # keep MAC addresses stable across VM re-definitions
     old_ifaces = get_vm_macs(vm_name, conn=conn)
-    ifaces = dict((name, {'source_net': iface['source_net'],
-                          'mac': old_ifaces.get(iface['source_net'])})
-                  for name, iface in vm_def['interfaces'].items())
-    vm_params.update(interfaces=ifaces)
+    for _, iface in vm_params['interfaces'].items():
+        mac = old_ifaces.get(iface['source_net'])
+        if mac:
+            iface.update(mac=mac)
 
     tpl = env.get_or_select_template(template)
     raw_out = tpl.render(vm_params)

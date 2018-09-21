@@ -66,8 +66,6 @@ def rebuild_vms(vm_dict,
         vm_def = copy.deepcopy(vm)
         vm_def['role'] = role
         vm_def = merge_vm_info(cluster_def, vm_def)
-
-        vm_def = merge_vm_info(cluster_def, vm_def)
         new_vm_list.append(vm_def)
 
     vm_list = new_vm_list
@@ -181,8 +179,21 @@ def merge_vm_info(cluster_def, vm_def):
         if var in vm_def:
             dst[var] = vm_def[var]
 
+    def runs_windows(vm_def):
+        return vm_def['distro'].startswith('woe')
+
+    def has_libvirt_drivers(vm_def):
+        return not(runs_windows(vm_def)) or 'drivers' in vm_def.get('drives', {})
+
+    if runs_windows(new_vm_def):
+        # Windows VMs need CD drive(s) and a floppy
+        new_vm_def['vm_template'] = 'vm_woe.xml'
+
     drives = copy.deepcopy(cluster_def['machine']['drives'])
     drives.update(vm_def.get('drives', {}))
+    if 'drivers' in drives:
+        drivers_iso = drives['drivers']['path']
+        drives['drivers'] = os.path.expanduser(drivers_iso)
 
     extra_drives = {
         'install_image': os.path.expanduser(_param('source_image')['path']),
@@ -191,8 +202,17 @@ def merge_vm_info(cluster_def, vm_def):
     drives.update(extra_drives)
     new_vm_def.update(drives=drives)
 
+    def guess_nic_model(vm_def):
+        if 'model' in iface:
+            return iface['model']
+        else:
+            return 'virtio' if has_libvirt_drivers(vm_def) else 'e1000'
+
     interfaces = copy.deepcopy(cluster_def['machine']['interfaces'])
     interfaces.update(vm_def.get('interfaces', {}))
+    for _, iface in interfaces.items():
+        if 'model' not in iface:
+            iface['model'] = guess_nic_model(new_vm_def)
     new_vm_def.update(interfaces=interfaces)
 
     auth_data = {
