@@ -1,7 +1,8 @@
 
 rem enable WinRM firewall
 netsh advfirewall firewall set rule group="remote administration" new enable=yes
-netsh firewall add portopening TCP 5985 "Port 5985 (WinRM via HTTP)"
+netsh advfirewall firewall add rule name="Port 5985 (WinRM via HTTP)" dir=in action=allow protocol=TCP localport=5985 profile=any
+
 {% if http_proxy %}
 netsh winhttp set proxy "{{ http_proxy.split('http://', 1)[-1] }}"
 {% endif %}
