@@ -109,6 +109,8 @@ def rebuild_vms(vm_dict,
         provision([vdisk],
                   img=vm_def['drives']['install_image'],
                   config_drives=[vm_def['drives']['config_image']],
+                  optimize_rootfs=vm_def['optimize_rootfs'],
+                  anonimize_rootfs=vm_def['anonimize_rootfs'],
                   swap_size=vm_def['swap_size'] * 1024 * 2,
                   swap_label=vm_def['swap_label'])
         provisioned.put(vm_name)
@@ -147,6 +149,8 @@ def merge_vm_info(cluster_def, vm_def):
         'vm_template': 'vm.xml',
         'graphics': {},
         'instance_id': uuid.uuid4(),
+        'optimize_rootfs': True,
+        'anonimize_rootfs': True,
     }
 
     new_vm_def = copy.deepcopy(builtin_machine)

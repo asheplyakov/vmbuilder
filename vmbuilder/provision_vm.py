@@ -30,6 +30,12 @@ TOUCH_FILES = (
     '/etc/machine-id',
 )
 
+EXT_FSES = (
+    'ext2',
+    'ext3',
+    'ext4',
+)
+
 
 def _fixup_path():
     if '/sbin' not in os.environ['PATH'].split(':'):
@@ -46,6 +52,8 @@ def _provision(vdisk, img=None,
                swap_size=None,
                swap_label=None,
                orig_size=None,
+               optimize_rootfs=True,
+               anonimize_rootfs=True,
                first_partition_offset=None,
                cleanup_files=CLEANUP_FILES,
                touch_files=TOUCH_FILES):
@@ -63,8 +71,11 @@ def _provision(vdisk, img=None,
                      first_partition_offset=first_partition_offset)
     activate_partitions(vdisk)
     rootdev = '{0}1'.format(vdisk)
-    clone_rootfs(rootdev, img=img, offset=first_partition_offset)
-    anonymize(rootdev, cleanup_files, touch_files)
+    fstype = clone_rootfs(rootdev, img=img, offset=first_partition_offset)
+    if optimize_rootfs:
+        optimize_fs(rootdev, fstype)
+    if anonimize_rootfs:
+        anonymize(rootdev, fstype, cleanup_files, touch_files)
     if config_drive_img:
         config_drive_dev = '{0}3'.format(vdisk)
         copy_config_drive(config_drive_img, config_drive_dev)
@@ -77,6 +88,8 @@ def _provision(vdisk, img=None,
 def provision(vdisks,
               img=None,
               config_drives=None,
+              optimize_rootfs=True,
+              anonimize_rootfs=True,
               swap_size=SWAP_MB * 1024 * 2,
               swap_label=SWAP_LABEL,
               cleanup_files=CLEANUP_FILES,
@@ -91,6 +104,8 @@ def provision(vdisks,
                    first_partition_offset=first_partition_offset,
                    swap_size=swap_size,
                    swap_label=swap_label,
+                   optimize_rootfs=optimize_rootfs,
+                   anonimize_rootfs=anonimize_rootfs,
                    cleanup_files=cleanup_files,
                    touch_files=touch_files)
 
@@ -114,11 +129,16 @@ def clone_rootfs(dst, img=None, offset=0):
         raise RuntimeError('provisioning %s filesystem is not supported')
     cmd = ['e2image', '-p', '-aro', str(bytes_offset), img, dst]
     subprocess.check_call(cmd)
+    return fstype
+
+
+def optimize_fs(bdev, fstype):
     if fstype in ('ext4'):
-        disable_ext4_journal(dst)
-    run_e2fsck(dst, '-f', '-p')
-    resize2fs(dst, '-p')
-    run_e2fsck(dst, '-f', '-p', '-D')
+        disable_ext4_journal(bdev)
+    if fstype in EXT_FSES:
+        run_e2fsck(bdev, '-f', '-p')
+        resize2fs(bdev, '-p')
+        run_e2fsck(bdev, '-f', '-p', '-D')
 
 
 def copy_boot_loader(vdisk, img=None,
@@ -283,8 +303,10 @@ def copy_config_drive(src, dst):
     run_dd(src, dst, bs='512c', conv='fsync')
 
 
-def anonymize(fsimage, cleanup_files, touch_files):
+def anonymize(fsimage, fstype, cleanup_files, touch_files):
     """ remove /etc/machine-id and similar per system files """
+    if fstype not in EXT_FSES:
+        raise RuntimeError("anonymize: only ext[234] filesystem supported")
     for path in cleanup_files:
         e2fs_rm(path, fsimage)
     for path in touch_files:
@@ -302,6 +324,8 @@ def _provision_woe(vdisk):
 def provision_woe(vdisks,
                   img=None,
                   config_drives=None,
+                  optimize_rootfs=False,
+                  anonimize_rootfs=False,
                   swap_size=SWAP_MB * 1024 * 2,
                   swap_label=SWAP_LABEL):
     for vdisk in vdisks:
