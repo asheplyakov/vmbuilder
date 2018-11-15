@@ -10,7 +10,6 @@ try:
 except ImportError:
     import queue as Queue
 import uuid
-import yaml
 
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool as ThreadPool
@@ -26,7 +25,6 @@ from .miscutils import (
 
 from .provision_vm import get_provision_method
 from .py3compat import (
-    subprocess,
     raise_exception,
 )
 from .sshutils import (

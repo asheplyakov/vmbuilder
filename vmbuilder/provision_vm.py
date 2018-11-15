@@ -42,7 +42,8 @@ def _fixup_path():
         os.environ['PATH'] = '/sbin:' + os.environ['PATH']
 
 
-# XXX: kpartx uses /dev/loop0, so concurrent kpartx can lock up or give wrong results
+# XXX: kpartx uses /dev/loop0, so concurrent kpartx can lock up
+# or give wrong results
 KPARTX_MUTEX = threading.RLock()
 _fixup_path()
 
